@@ -1,0 +1,51 @@
+{
+    "name":  "xining-juezhe",
+    "private":  true,
+    "version":  "0.2.0",
+    "main":  "electron/main.cjs",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite --host 0.0.0.0",
+                    "build":  "vite build",
+                    "preview":  "vite preview --host 0.0.0.0",
+                    "electron:pack":  "npm run build \u0026\u0026 electron-builder --win portable --publish never --config.win.signAndEditExecutable=false",
+                    "electron:dir":  "npm run build \u0026\u0026 electron-builder --win dir"
+                },
+    "build":  {
+                  "appId":  "cn.xining.juezhe",
+                  "productName":  "熙宁抉择",
+                  "directories":  {
+                                      "output":  "release"
+                                  },
+                  "files":  [
+                                "dist/**/*",
+                                "electron/**/*",
+                                "package.json",
+                                "build/**/*"
+                            ],
+                  "win":  {
+                              "target":  [
+                                             "portable"
+                                         ],
+                              "artifactName":  "熙宁抉择-${version}.exe",
+                              "icon":  "build/icon.ico"
+                          },
+                  "portable":  {
+                                   "artifactName":  "熙宁抉择-${version}.exe"
+                               }
+              },
+    "dependencies":  {
+                         "@vitejs/plugin-react":  "^4.2.1",
+                         "framer-motion":  "^11.0.0",
+                         "react":  "^18.2.0",
+                         "react-dom":  "^18.2.0",
+                         "vite":  "^5.2.0"
+                     },
+    "devDependencies":  {
+                            "autoprefixer":  "^10.4.18",
+                            "electron":  "^42.0.1",
+                            "electron-builder":  "^26.8.1",
+                            "postcss":  "^8.4.35",
+                            "tailwindcss":  "^3.4.1"
+                        }
+}
