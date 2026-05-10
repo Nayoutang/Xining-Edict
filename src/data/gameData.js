@@ -276,19 +276,19 @@ const rawDecisionNodes = [
 const feedbackOptionMeta = {
   appointment: {
     A: {
-      image: '/images/feedback/xining-strong.jpg',
+      image: 'images/feedback/xining-strong.jpg',
       imageTitle: '熙宁强启反馈图',
       imageDescription: '后续可替换为王安石入政、朝堂议政等历史场景图片。',
       summary: '改革中枢迅速成形，但士大夫疑虑也开始积累。',
     },
     B: {
-      image: '/images/feedback/xining-gradual.jpg',
+      image: 'images/feedback/xining-gradual.jpg',
       imageTitle: '熙宁缓启反馈图',
       imageDescription: '后续可替换为局部试行、群臣观望等历史场景图片。',
       summary: '改革获得试行空间，朝局仍保留回旋余地。',
     },
     C: {
-      image: '/images/feedback/xining-delay.jpg',
+      image: 'images/feedback/xining-delay.jpg',
       imageTitle: '熙宁暂缓反馈图',
       imageDescription: '后续可替换为旧臣主政、案牍积压等历史场景图片。',
       summary: '朝局暂得安稳，但财政与边防压力继续累积。',
@@ -296,25 +296,25 @@ const feedbackOptionMeta = {
   },
   'green-sprouts': {
     A: {
-      image: '/images/feedback/qingmiao-force.jpg',
+      image: 'images/feedback/qingmiao-force.jpg',
       imageTitle: '青苗强推反馈图',
       imageDescription: '后续可替换为青苗钱下发、乡里催科等历史场景图片。',
       summary: '财政收益正在上升，但基层压力与士论阻力也在积累。',
     },
     B: {
-      image: '/images/feedback/qingmiao-trial.jpg',
+      image: 'images/feedback/qingmiao-trial.jpg',
       imageTitle: '青苗试行反馈图',
       imageDescription: '后续可替换为州县试点、农户观望等历史场景图片。',
       summary: '改革推进速度放慢，但政策风险有所降低。',
     },
     C: {
-      image: '/images/feedback/qingmiao-supervised.jpg',
+      image: 'images/feedback/qingmiao-supervised.jpg',
       imageTitle: '青苗督察反馈图',
       imageDescription: '后续可替换为官吏核账、严禁摊派等历史场景图片。',
       summary: '理财目标得以保留，基层扭曲被明显压低。',
     },
     D: {
-      image: '/images/feedback/qingmiao-delay.jpg',
+      image: 'images/feedback/qingmiao-delay.jpg',
       imageTitle: '青苗缓议反馈图',
       imageDescription: '后续可替换为诏令暂缓、民间喘息等历史场景图片。',
       summary: '民生压力有所缓和，但财政突破被推迟。',
@@ -322,19 +322,19 @@ const feedbackOptionMeta = {
   },
   'labor-service': {
     A: {
-      image: '/images/feedback/muyi-full.jpg',
+      image: 'images/feedback/muyi-full.jpg',
       imageTitle: '募役全面反馈图',
       imageDescription: '后续可替换为役钱征收、差役改制等历史场景图片。',
       summary: '行政效率有所提升，但役钱压力会落到基层。',
     },
     B: {
-      image: '/images/feedback/muyi-gradual.jpg',
+      image: 'images/feedback/muyi-gradual.jpg',
       imageTitle: '募役分步反馈图',
       imageDescription: '后续可替换为分户定役、州县核定等历史场景图片。',
       summary: '制度改革稳步推进，民生与法度保持较好平衡。',
     },
     C: {
-      image: '/images/feedback/muyi-conservative.jpg',
+      image: 'images/feedback/muyi-conservative.jpg',
       imageTitle: '募役守旧反馈图',
       imageDescription: '后续可替换为旧役保留、士论暂安等历史场景图片。',
       summary: '政治阻力下降，但差役积弊仍难根除。',
@@ -342,25 +342,25 @@ const feedbackOptionMeta = {
   },
   'market-exchange': {
     A: {
-      image: '/images/feedback/shiyi-strong.jpg',
+      image: 'images/feedback/shiyi-strong.jpg',
       imageTitle: '市易强设反馈图',
       imageDescription: '后续可替换为市易司设立、官府入市等历史场景图片。',
       summary: '国家调控能力增强，商民与士论的反弹也随之上升。',
     },
     B: {
-      image: '/images/feedback/shiyi-trial.jpg',
+      image: 'images/feedback/shiyi-trial.jpg',
       imageTitle: '市易试行反馈图',
       imageDescription: '后续可替换为都城试办、商贾交易等历史场景图片。',
       summary: '政策收益较为有限，但市场震荡被压低。',
     },
     C: {
-      image: '/images/feedback/shiyi-balance.jpg',
+      image: 'images/feedback/shiyi-balance.jpg',
       imageTitle: '市易平准反馈图',
       imageDescription: '后续可替换为平抑物价、官商折冲等历史场景图片。',
       summary: '民生与法度得到照顾，财政增益不再是唯一目标。',
     },
     D: {
-      image: '/images/feedback/shiyi-cancel.jpg',
+      image: 'images/feedback/shiyi-cancel.jpg',
       imageTitle: '市易罢议反馈图',
       imageDescription: '后续可替换为市井复常、朝议缓和等历史场景图片。',
       summary: '经济争议减少，但国家调控工具随之削弱。',
@@ -368,19 +368,19 @@ const feedbackOptionMeta = {
   },
   baojia: {
     A: {
-      image: '/images/feedback/baojia-strong.jpg',
+      image: 'images/feedback/baojia-strong.jpg',
       imageTitle: '保甲强兵反馈图',
       imageDescription: '后续可替换为乡兵操练、保甲编组等历史场景图片。',
       summary: '边防能力增强，然而基层承受力正在下降。',
     },
     B: {
-      image: '/images/feedback/baojia-border.jpg',
+      image: 'images/feedback/baojia-border.jpg',
       imageTitle: '保甲边防反馈图',
       imageDescription: '后续可替换为边地训练、烽燧守备等历史场景图片。',
       summary: '军事收益集中在边地，社会扰动相对可控。',
     },
     C: {
-      image: '/images/feedback/baojia-governance.jpg',
+      image: 'images/feedback/baojia-governance.jpg',
       imageTitle: '保甲治安反馈图',
       imageDescription: '后续可替换为乡里巡防、基层治安等历史场景图片。',
       summary: '基层秩序更稳，但强兵目标只能有限推进。',
@@ -388,25 +388,25 @@ const feedbackOptionMeta = {
   },
   factionalism: {
     A: {
-      image: '/images/feedback/party-suppress.jpg',
+      image: 'images/feedback/party-suppress.jpg',
       imageTitle: '党争压制反馈图',
       imageDescription: '后续可替换为朝堂廷争、贬黜旧臣等历史场景图片。',
       summary: '改革阻力短期下降，但政治裂痕迅速扩大。',
     },
     B: {
-      image: '/images/feedback/party-revise.jpg',
+      image: 'images/feedback/party-revise.jpg',
       imageTitle: '党争修订反馈图',
       imageDescription: '后续可替换为旧臣参议、制度修订等历史场景图片。',
       summary: '朝局趋于稳定，制度成果更有机会留存。',
     },
     C: {
-      image: '/images/feedback/party-debate.jpg',
+      image: 'images/feedback/party-debate.jpg',
       imageTitle: '党争公议反馈图',
       imageDescription: '后续可替换为公开论辩、诏令修正等历史场景图片。',
       summary: '反对声音被纳入制度调整，改革速度因此放缓。',
     },
     D: {
-      image: '/images/feedback/party-compromise.jpg',
+      image: 'images/feedback/party-compromise.jpg',
       imageTitle: '党争妥协反馈图',
       imageDescription: '后续可替换为罢议新法、朝局暂安等历史场景图片。',
       summary: '朝局趋于稳定，但制度突破空间也随之缩小。',
