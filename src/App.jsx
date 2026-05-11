@@ -666,9 +666,9 @@ function GalleryPage({ onBack }) {
 
 function RecordPage({ history, onBack, onRestart }) {
   return (
-    <PageShell>
-      <section className="scroll-card p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <PageShell full className="h-[calc(100vh-96px)] overflow-hidden px-4 py-3 sm:px-6 lg:px-10">
+      <section className="scroll-card flex h-full min-h-0 flex-col overflow-hidden p-5 sm:p-6">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm tracking-[0.32em] text-cinnabar">路线记录</p>
             <h2 className="mt-3 font-song text-4xl font-black text-ink">你留下的改革轨迹</h2>
@@ -682,7 +682,7 @@ function RecordPage({ history, onBack, onRestart }) {
             </button>
           </div>
         </div>
-        <div className="mt-8">
+        <div className="record-scroll mt-6 min-h-0 flex-1 overflow-y-auto pr-2">
           <RouteRecord history={history} />
         </div>
       </section>
