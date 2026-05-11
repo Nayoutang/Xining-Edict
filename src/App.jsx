@@ -29,7 +29,7 @@ const attributionStatOrder = ['国用', '民生', '边防', '士论', '法度', 
 function AudioSettings() {
   const audioRef = useRef(null);
   const [enabled, setEnabled] = useState(true);
-  const [volume, setVolume] = useState(0.36);
+  const [volume, setVolume] = useState(0.12);
   const [unlocked, setUnlocked] = useState(false);
 
   function playBackgroundMusic() {
