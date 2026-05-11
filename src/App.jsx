@@ -30,7 +30,6 @@ function AudioSettings() {
   const audioRef = useRef(null);
   const [enabled, setEnabled] = useState(true);
   const [volume, setVolume] = useState(0.12);
-  const [unlocked, setUnlocked] = useState(false);
 
   function playBackgroundMusic() {
     const audio = audioRef.current;
@@ -51,27 +50,26 @@ function AudioSettings() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (enabled && unlocked) {
+    if (enabled) {
       playBackgroundMusic();
     } else {
       audio.pause();
     }
-  }, [enabled, unlocked]);
+  }, [enabled]);
 
   useEffect(() => {
-    function unlockAudio() {
-      setUnlocked(true);
+    function retryPlayback() {
       if (enabled) {
         playBackgroundMusic();
       }
     }
 
-    window.addEventListener('pointerdown', unlockAudio, { once: true });
-    window.addEventListener('keydown', unlockAudio, { once: true });
+    window.addEventListener('pointerdown', retryPlayback, { once: true });
+    window.addEventListener('keydown', retryPlayback, { once: true });
 
     return () => {
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('pointerdown', retryPlayback);
+      window.removeEventListener('keydown', retryPlayback);
     };
   }, [enabled]);
 
@@ -81,7 +79,6 @@ function AudioSettings() {
       <button
         type="button"
         onClick={() => {
-          setUnlocked(true);
           setEnabled((value) => !value);
           if (!enabled) {
             playBackgroundMusic();
@@ -104,7 +101,6 @@ function AudioSettings() {
             const nextVolume = Number(event.target.value);
             setVolume(nextVolume);
             setEnabled(nextVolume > 0);
-            setUnlocked(true);
           }}
         />
         <span className="w-8 text-right text-xs tabular-nums">{Math.round(volume * 100)}</span>

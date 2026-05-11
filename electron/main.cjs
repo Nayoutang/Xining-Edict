@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 function createWindow() {
   const iconPath = path.join(__dirname, '..', 'build', 'icon.ico');
   const mainWindow = new BrowserWindow({
