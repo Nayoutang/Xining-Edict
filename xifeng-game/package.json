@@ -40,6 +40,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "build/icon.png",
       "server.mjs",
       "ai-history.mjs",
       "package.json"
@@ -50,8 +51,9 @@
     ],
     "win": {
       "target": ["portable"],
+      "icon": "build/icon.ico",
       "artifactName": "Xining-Edict-Windows.exe",
-      "signAndEditExecutable": false
+      "signExecutable": false
     },
     "portable": {
       "artifactName": "Xining-Edict-Windows.exe"
