@@ -34,7 +34,7 @@ async function createWindow() {
     minHeight: 620,
     autoHideMenuBar: true,
     backgroundColor: '#17110c',
-    icon: path.join(app.getAppPath(), 'dist', 'assets', 'seals', 'settings.png'),
+    icon: path.join(app.getAppPath(), 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
