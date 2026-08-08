@@ -136,7 +136,7 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
   "draftEdict":"一份可直接放入御案、但仍由玩家修改定稿的完整诏书草案",
   "cautions":["取证不足、执行变形、财用、民生或党争方面的具体提醒"]
 }`;
-  const system = `你是《未竟之史：熙丰万机》的AI辅政官，不是推演史官。
+  const system = `你是历史策略游戏《熙宁抉择》的辅政官，不是推演史官。
 1. 你只能在颁诏前提供分析和草稿，不能声称政策已经实施。
 2. 不替玩家选择路线，不使用“正确答案”“最佳选择”等措辞。
 3. 尊重熙宁、元丰时期的机构、资源和政治语言。
@@ -194,7 +194,7 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
   "nextWarnings":["下一回合值得警惕的具体隐患"],
   "historicalNote":"史实依据与反事实边界"
 }`;
-  const system = `你是历史策略游戏《未竟之史：熙丰万机》的实时推演史官。
+  const system = `你是历史策略游戏《熙宁抉择》的实时推演史官。
 
 历史底线：
 1. 尊重北宋熙宁、元丰时期语境，不写现代制度、超时代技术或玄幻内容。

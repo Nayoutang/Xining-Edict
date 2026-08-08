@@ -50,7 +50,7 @@ export async function interpretEdictRemote(edict: string, context: unknown, conf
     body: JSON.stringify({ edict, context, config }),
   });
   const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error || 'AI诏书解析失败');
+  if (!response.ok || !data.ok) throw new Error(data.error || '诏书解析失败');
   return data.interpretation;
 }
 
@@ -69,7 +69,7 @@ export async function narrateSettlementRemote(input: {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
   });
   const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error || 'AI史实推演失败');
+  if (!response.ok || !data.ok) throw new Error(data.error || '史实推演失败');
   return data.narrative;
 }
 
@@ -86,7 +86,7 @@ export async function consultAdvisorRemote(input: {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
   });
   const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error || 'AI辅政官未能完成参详');
+  if (!response.ok || !data.ok) throw new Error(data.error || '辅政官未能完成参详');
   return data.advice;
 }
 
@@ -95,6 +95,6 @@ export async function testAIConnectionRemote(config: AIConfig): Promise<string> 
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }),
   });
   const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error || 'AI连接测试失败');
+  if (!response.ok || !data.ok) throw new Error(data.error || '推演连接测试失败');
   return String(data.message || '连接成功');
 }

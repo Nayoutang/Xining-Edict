@@ -1,6 +1,6 @@
 {
-  "name": "xifeng-game",
-  "version": "1.0.0",
+  "name": "xining-edict",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -48,6 +48,12 @@
     "asarUnpack": [
       "server.mjs",
       "ai-history.mjs"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "app-icon.png"
+      }
     ],
     "win": {
       "target": ["portable"],
