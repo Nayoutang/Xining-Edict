@@ -1,9 +1,12 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, nativeImage } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 let mainWindow = null;
 let apiServer = null;
+
+app.setName('熙宁抉择');
+if (process.platform === 'win32') app.setAppUserModelId('cn.xining.juezhe');
 
 async function startApiServer() {
   const serverPath = app.isPackaged
@@ -27,20 +30,30 @@ async function startApiServer() {
 
 async function createWindow() {
   const apiPort = await startApiServer();
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'app-icon.png')
+    : path.join(app.getAppPath(), 'build', 'icon.png');
+  const windowIcon = nativeImage.createFromPath(iconPath);
   mainWindow = new BrowserWindow({
+    title: '熙宁抉择',
     width: 1600,
     height: 900,
     minWidth: 1100,
     minHeight: 620,
     autoHideMenuBar: true,
     backgroundColor: '#17110c',
-    icon: path.join(app.getAppPath(), 'build', 'icon.png'),
+    icon: windowIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault();
+    mainWindow?.setTitle('熙宁抉择');
   });
 
   mainWindow.maximize();

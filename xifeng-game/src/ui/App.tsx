@@ -100,7 +100,7 @@ export function App() {
         : parseEdict(edictText);
     } catch (caught) {
       parsed = parseEdict(edictText);
-      parsed.warnings.unshift(`AI解析未完成，已改用本地规则：${caught instanceof Error ? caught.message : '连接失败'}`);
+      parsed.warnings.unshift(`诏书解析未完成，已改用本地规则：${caught instanceof Error ? caught.message : '连接失败'}`);
     } finally {
       if (showBusy) setAIBusy('');
     }
@@ -132,7 +132,7 @@ export function App() {
             policies: preparedPolicies, record: next.record, history: state.history, config: inferenceConfig,
           }));
         } catch (caught) {
-          aiError = caught instanceof Error ? caught.message : 'AI史实推演连接失败';
+          aiError = caught instanceof Error ? caught.message : '史实推演连接失败';
         } finally {
           if (showBusy) setAIBusy('');
         }
@@ -566,7 +566,7 @@ function Records({ state }: { state: GameState }) {
           const record = recordsByTurn.get(turn);
           const active = turn === selectedTurn;
           return <button key={turn} type="button" className={`${active ? 'active' : ''}${record ? ' recorded' : ' future'}`} disabled={!record} onClick={() => setSelectedTurn(turn)}>
-            <i>{numerals[turn] ?? turn}</i><strong>第{numerals[turn] ?? turn}回</strong><span>{record ? formatGameDate(record.date) : turnDate(turn)}</span>
+            <i>{turn}</i><strong>第{numerals[turn] ?? turn}回</strong><span>{record ? formatGameDate(record.date) : turnDate(turn)}</span>
           </button>;
         })}
       </div>
@@ -599,7 +599,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, onAdopt
 
   async function consult() {
     if (!config.apiKey) {
-      setAdvisorError('尚未配置 DeepSeek API Key，请先在“AI史官”中保存推演配置。');
+      setAdvisorError('尚未配置推演密钥，请先完成模型配置。');
       return;
     }
     setAdvisorError('');
@@ -614,7 +614,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, onAdopt
   }
 
   return <section className="advisor-workspace">
-    <header><div><span>颁诏前咨询 · 共用推演底座</span><h3>{advice ? '格局判断' : 'AI辅政官'}</h3></div><small>{config.model}</small></header>
+    <header><div><span>颁诏前咨询 · 御前参详</span><h3>{advice ? '格局判断' : '辅政官'}</h3></div><small>{config.model}</small></header>
     <p>{advice ? '辅政官已据当前国势参详利害，以下判断与草诏仍由陛下裁定。' : '辅政官以儒家治道为纲，比较路线利害权衡轻重；是否采用、如何修改、何时用玺仍由陛下裁定。'}</p>
     <div className="advisor-question"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
@@ -691,11 +691,11 @@ function AISettings({ inferenceConfig, onSave }: { inferenceConfig: AIConfig; on
   const [testing, setTesting] = useState(false);
   const fixedConfig: AIConfig = { ...inferenceDraft, provider: 'deepseek', model: providerDefaults.deepseek.model, baseUrl: providerDefaults.deepseek.baseUrl };
   return <form className="ai-settings" onSubmit={(event) => { event.preventDefault(); onSave(fixedConfig); }}>
-    <p className="settings-note">AI辅政官与推演史官共用一套已验证的 DeepSeek 配置。两个角色均固定使用 deepseek-v4-flash，以不同提示词区分职责，避免额外模型权限、思考模式和并发问题。API Key只保存在当前浏览器。</p>
+    <p className="settings-note">辅政官与推演史官共用一套已验证的 DeepSeek 配置。两个角色均固定使用 deepseek-v4-flash，以不同提示词区分职责，避免额外模型权限、思考模式和并发问题。API Key只保存在当前浏览器。</p>
     <label>模型厂商<input value="DeepSeek" readOnly /></label>
     <label>API Key<input type="password" value={inferenceDraft.apiKey} onChange={(event) => setInferenceDraft({ ...inferenceDraft, apiKey: event.target.value })} placeholder="sk-..." autoComplete="off" /></label>
     <label>Base URL<input value={providerDefaults.deepseek.baseUrl} readOnly /></label>
-    <div className="dual-model-settings"><label><span>AI辅政官模型</span><small>格局分析与草诏</small><input value="deepseek-v4-flash" readOnly /></label><label><span>推演史官模型</span><small>诏意识别与半年推演</small><input value="deepseek-v4-flash" readOnly /></label></div>
+    <div className="dual-model-settings"><label><span>辅政官模型</span><small>格局分析与草诏</small><input value="deepseek-v4-flash" readOnly /></label><label><span>推演史官模型</span><small>诏意识别与半年推演</small><input value="deepseek-v4-flash" readOnly /></label></div>
     {testStatus && <p className={`connection-status ${testStatus.startsWith('连接成功') ? 'success' : 'failure'}`}>{testStatus}</p>}
     <div className="settings-actions three"><button type="button" onClick={() => { setInferenceDraft({ ...fixedConfig, apiKey: '' }); setTestStatus(''); }}>清空 Key</button><button type="button" disabled={testing || !inferenceDraft.apiKey} onClick={async () => { setTesting(true); setTestStatus(''); try { await testAIConnectionRemote(fixedConfig); setTestStatus('连接成功：辅政官与推演史官的共享模型已就绪'); } catch (caught) { setTestStatus(`连接失败：共享模型 deepseek-v4-flash：${caught instanceof Error ? caught.message : '未知错误'}`); } finally { setTesting(false); } }}>{testing ? '测试中…' : '测试共享模型'}</button><button type="submit">保存设置</button></div>
   </form>;
@@ -805,7 +805,7 @@ function Result({ result, state, onClose }: {
           </article>)}
         </div>
         {narrative?.nextWarnings.length ? <section className="settlement-warnings"><strong>后续警讯</strong>{narrative.nextWarnings.slice(0, 2).map((item) => <p key={item}>· {item}</p>)}</section> : null}
-        {result.aiError && <p className="settlement-ai-error">AI 奏报未完成：{result.aiError}。以上数值仍由规则引擎正常结算。</p>}
+        {result.aiError && <p className="settlement-ai-error">史官奏报未完成：{result.aiError}。以上数值仍由规则正常结算。</p>}
         <button className="settlement-archive" type="button" onClick={onClose}><span>归档</span><small>进入 {formatDate(state)}</small></button>
       </aside>
     </section>

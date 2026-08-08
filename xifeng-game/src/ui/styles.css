@@ -1361,7 +1361,8 @@ button { font: inherit; }
   filter: drop-shadow(0 2px 1px #f2dfaa66);
 }
 .drawer-workspace.drawer-saves>header>button:hover { color: #6e2c24; transform: rotate(8deg); }
-.drawer-workspace.drawer-saves>header>button svg { width: 42%; height: 42%; transform: translate(-5px,-6px); }
+.drawer-workspace.drawer-saves>header>button { display: grid; place-items: center; padding: 0; }
+.drawer-workspace.drawer-saves>header>button svg { width: 42%; height: 42%; transform: none; }
 .drawer-workspace.drawer-saves .drawer-scroll { position: absolute; inset: 0; overflow: hidden; padding: 0; }
 .save-archive { position: absolute; inset: 0; color: #453729; }
 .save-archive>header { position: absolute; top: 16.5%; left: 17%; width: 29.5%; border-bottom: 1px solid #987b5675; padding: 0 0 1.5%; }
@@ -2466,7 +2467,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-vis
 .drawer.drawer-edict > header button {
   position: absolute;
   top: 0;
-  right: -1%;
+  right: -5.7%;
   display: grid;
   width: clamp(38px,3vw,56px);
   height: clamp(38px,3vw,56px);
@@ -3328,8 +3329,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-vis
 
 .drawer.drawer-records > header button {
   position: absolute;
-  top: 4.9%;
-  right: 7.9%;
+  top: 6.9%;
+  right: 6.5%;
   display: grid;
   width: clamp(44px,3.7vw,70px);
   height: clamp(44px,3.7vw,70px);
