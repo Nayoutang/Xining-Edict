@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="plaquePaper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#efe1bc"/>
+      <stop offset=".52" stop-color="#e8d4aa"/>
+      <stop offset="1" stop-color="#d4b982"/>
+    </linearGradient>
+    <radialGradient id="sealPaper" cx=".42" cy=".35" r=".72">
+      <stop offset="0" stop-color="#ead8af"/>
+      <stop offset=".72" stop-color="#d7bb86"/>
+      <stop offset="1" stop-color="#c8a66d"/>
+    </radialGradient>
+    <filter id="paperShadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#2b170d" flood-opacity=".28"/>
+    </filter>
+    <marker id="arrowStart" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto">
+      <path d="M8 0 0 4 8 8Z" fill="#9a493d"/>
+    </marker>
+    <marker id="arrowEnd" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0 0 8 4 0 8Z" fill="#9a493d"/>
+    </marker>
+  </defs>
+
+  <g id="imperial-center" filter="url(#paperShadow)">
+    <rect x="435" y="218" width="160" height="45" rx="2" fill="url(#plaquePaper)" stroke="#917755" stroke-width="1.5"/>
+    <rect x="441" y="224" width="148" height="33" rx="1" fill="none" stroke="#b59a6c" stroke-width="1"/>
+    <path d="M435 229h8v-11M587 218v11h8M435 252h8v11M587 263v-11h8"
+      fill="none" stroke="#8c7350" stroke-width="1.4"/>
+  </g>
+
+  <g id="hierarchy-lines" fill="none" stroke="#594634" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".82">
+    <path d="M515 263V342H324V371"/>
+    <path d="M515 342V371"/>
+    <path d="M515 342H693V371"/>
+  </g>
+
+  <g id="supervision-line" fill="#914337" stroke="#914337" opacity=".9">
+    <path d="M752 486H848" fill="none" stroke-width="2" stroke-dasharray="8 6"
+      marker-start="url(#arrowStart)" marker-end="url(#arrowEnd)"/>
+    <text x="800" y="469" stroke="none" text-anchor="middle"
+      font-family="Source Han Serif CN, Noto Serif SC, serif" font-size="14" font-weight="600" letter-spacing="2">监督·谏诤</text>
+  </g>
+
+  <g id="fiscal-line" fill="#914337" stroke="#914337" opacity=".88">
+    <path d="M376 650H700" fill="none" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="604" y="641" stroke="none" text-anchor="middle"
+      font-family="Source Han Serif CN, Noto Serif SC, serif" font-size="12" font-weight="600" letter-spacing="1.2">财赋执行·地方审运</text>
+  </g>
+</svg>

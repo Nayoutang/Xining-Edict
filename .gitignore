@@ -1,6 +1,9 @@
 node_modules/
 dist/
 release/
+.playwright-cli/
+output/
+tmp/
 picture/
 *.zip
 *.log

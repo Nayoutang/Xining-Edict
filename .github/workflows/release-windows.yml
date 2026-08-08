@@ -1,0 +1,32 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: xifeng-game/package-lock.json
+      - name: Install dependencies
+        working-directory: xifeng-game
+        run: npm ci
+      - name: Package portable EXE
+        working-directory: xifeng-game
+        run: npm run electron:pack
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: xifeng-game/release/Xining-Edict-Windows.exe
