@@ -92,12 +92,10 @@ export function App() {
   }
 
   async function interpretEdict(showBusy = true) {
-    if (showBusy) setAIBusy(inferenceConfig.apiKey ? '推演模型正在理解诏书' : '中书正在核对诏令');
+    if (showBusy) setAIBusy('推演模型正在理解诏书');
     let parsed: EdictInterpretation;
     try {
-      parsed = inferenceConfig.apiKey
-        ? await interpretEdictRemote(edictText, { date: formatDate(state), event, indicators: state.indicators, resources: state.resources, polity: state.polity }, inferenceConfig)
-        : parseEdict(edictText);
+      parsed = await interpretEdictRemote(edictText, { date: formatDate(state), event, indicators: state.indicators, resources: state.resources, polity: state.polity }, inferenceConfig);
     } catch (caught) {
       parsed = parseEdict(edictText);
       parsed.warnings.unshift(`诏书解析未完成，已改用本地规则：${caught instanceof Error ? caught.message : '连接失败'}`);
@@ -124,18 +122,16 @@ export function App() {
       const next = settleTurn(state, { policyIds: preparedPolicyIds, officerId: preparedOfficerId, edictNote: edictText });
       let narrative: HistoricalNarrative | undefined;
       let aiError: string | undefined;
-      if (inferenceConfig.apiKey) {
-        if (showBusy) setAIBusy('史官正在推演朝廷、州县与民间反应');
-        try {
-          narrative = localizeHistoricalNarrative(await narrateSettlementRemote({
-            edict: edictText, stateBefore: state, stateAfter: next.state, event: next.event, officer: preparedOfficer,
-            policies: preparedPolicies, record: next.record, history: state.history, config: inferenceConfig,
-          }));
-        } catch (caught) {
-          aiError = caught instanceof Error ? caught.message : '史实推演连接失败';
-        } finally {
-          if (showBusy) setAIBusy('');
-        }
+      if (showBusy) setAIBusy('史官正在推演朝廷、州县与民间反应');
+      try {
+        narrative = localizeHistoricalNarrative(await narrateSettlementRemote({
+          edict: edictText, stateBefore: state, stateAfter: next.state, event: next.event, officer: preparedOfficer,
+          policies: preparedPolicies, record: next.record, history: state.history, config: inferenceConfig,
+        }));
+      } catch (caught) {
+        aiError = caught instanceof Error ? caught.message : '史实推演连接失败';
+      } finally {
+        if (showBusy) setAIBusy('');
       }
       if (narrative) next.record.aiSummary = narrative.situationUpdate || narrative.report.slice(0, 240);
       setDilemmaBaseline(state.dilemmas);
@@ -598,10 +594,6 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, onAdopt
   const [advisorError, setAdvisorError] = useState('');
 
   async function consult() {
-    if (!config.apiKey) {
-      setAdvisorError('尚未配置推演密钥，请先完成模型配置。');
-      return;
-    }
     setAdvisorError('');
     setBusy('辅政官正在参详天下格局');
     try {

@@ -28,10 +28,13 @@ export interface AdvisorAdvice {
   cautions: string[];
 }
 
+const hostedApiBase = 'https://xining-api.nayoutang3.workers.dev';
 const apiPort = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('apiPort');
-const apiBase = typeof window !== 'undefined' && window.location.protocol === 'file:' && apiPort
-  ? `http://127.0.0.1:${apiPort}`
-  : '';
+const apiBase = import.meta.env.PROD
+  ? hostedApiBase
+  : typeof window !== 'undefined' && window.location.protocol === 'file:' && apiPort
+    ? `http://127.0.0.1:${apiPort}`
+    : '';
 const apiUrl = (path: string) => `${apiBase}${path}`;
 
 export const providerDefaults: Record<AIConfig['provider'], Omit<AIConfig, 'provider' | 'apiKey'>> = {
