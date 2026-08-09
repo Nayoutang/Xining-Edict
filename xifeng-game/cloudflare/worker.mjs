@@ -12,7 +12,7 @@ const ALLOWED_ORIGINS = new Set([
 
 const requestBuckets = new Map();
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 30;
+const MAX_REQUESTS_PER_WINDOW = 60;
 
 export default {
   async fetch(request, env) {

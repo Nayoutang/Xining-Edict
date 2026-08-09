@@ -351,7 +351,7 @@ var ALLOWED_ORIGINS = /* @__PURE__ */ new Set([
 ]);
 var requestBuckets = /* @__PURE__ */ new Map();
 var WINDOW_MS = 10 * 60 * 1e3;
-var MAX_REQUESTS_PER_WINDOW = 30;
+var MAX_REQUESTS_PER_WINDOW = 60;
 var worker_default = {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
