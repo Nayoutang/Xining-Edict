@@ -2467,8 +2467,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-vis
 
 .drawer.drawer-edict > header button {
   position: absolute;
-  top: 0;
-  right: -5.7%;
+  top: 8%;
+  right: 0;
   display: grid;
   width: clamp(38px,3vw,56px);
   height: clamp(38px,3vw,56px);
