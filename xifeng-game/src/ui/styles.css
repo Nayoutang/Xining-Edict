@@ -3302,14 +3302,15 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-vis
 }
 
 .drawer.drawer-records {
-  width: 100vw;
-  height: 100vh;
+  width: min(100vw,177.6833vh);
+  height: min(100vh,56.2799vw);
+  aspect-ratio: 1672 / 941;
   max-width: none;
   max-height: none;
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background: #0b0805 url("/assets/backgrounds/records-book-clean-v1.png") center / cover no-repeat;
+  background: #0b0805 url("/assets/backgrounds/records-book-clean-v1.png") center / 100% 100% no-repeat;
   box-shadow: none;
 }
 
@@ -3329,12 +3330,13 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-vis
 .drawer.drawer-records > header > div { display: none; }
 
 .drawer.drawer-records > header button {
+  --records-close-size: clamp(44px,3.7vw,70px);
   position: absolute;
-  top: 6.9%;
-  right: 6.5%;
+  top: calc(9.46% - var(--records-close-size) / 2);
+  right: calc(9.87% - var(--records-close-size) / 2);
   display: grid;
-  width: clamp(44px,3.7vw,70px);
-  height: clamp(44px,3.7vw,70px);
+  width: var(--records-close-size);
+  height: var(--records-close-size);
   place-items: center;
   border: 0;
   border-radius: 50%;
