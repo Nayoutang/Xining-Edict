@@ -163,6 +163,45 @@ describe('半年回合结算', () => {
     expect(evaluateEnding(state)).toMatchObject({ id: 'balanced-reform', title: '新法有基', score: 50 });
   });
 
+  it('五项国势尚健康但资源耗尽时给出可解释的非零总评', () => {
+    const state = createInitialState();
+    for (const key of Object.keys(state.indicators) as Array<keyof typeof state.indicators>) state.indicators[key] = 56;
+    state.resources.administration = 0;
+
+    expect(evaluateEnding(state)).toMatchObject({
+      id: 'collapse',
+      title: '政令停摆',
+      score: 56,
+    });
+    expect(evaluateEnding(state).description).toContain('五项国势');
+    expect(evaluateEnding(state).description).toContain('行政余量');
+  });
+
+  it('按辅政官一主一辅节奏可完整走满八回合', () => {
+    let state = createInitialState();
+    const decisions = [
+      ['green-sprouts-trial', 'curb-local-exactions'],
+      ['service-reform-preparation', 'review-impeachments'],
+      ['water-conservancy', 'reduce-redundant-spending'],
+      ['cross-check-ledgers', 'discipline-corrupt-officials'],
+      ['green-sprouts-trial', 'curb-local-exactions'],
+      ['northwest-defense', 'review-impeachments'],
+      ['cross-check-ledgers', 'reduce-redundant-spending'],
+      ['water-conservancy', 'service-reform-preparation'],
+    ];
+
+    for (const policyIds of decisions) {
+      state = settleTurn(state, { policyIds, officerId: 'wang-anshi' }).state;
+      expect(state.ending?.id).not.toBe('collapse');
+    }
+
+    expect(state.history).toHaveLength(8);
+    expect(state.ended).toBe(true);
+    expect(state.ending?.id).toBe('balanced-reform');
+    expect(state.resources.administration).toBeGreaterThan(0);
+    expect(state.resources.politicalCapital).toBeGreaterThan(0);
+  });
+
   it('整饬吏治政务无需硬前置即可直接执行', () => {
     const ledgerState = settleTurn(createInitialState(), {
       policyIds: ['cross-check-ledgers'], officerId: 'zeng-bu',

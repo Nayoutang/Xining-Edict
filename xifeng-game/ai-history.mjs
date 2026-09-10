@@ -68,6 +68,29 @@ function localizeInternalTerms(value) {
   return text.trim();
 }
 
+const plainReactionLeads = new Map([
+  ['朝议', '直白说，朝臣最关心新法会不会失控。'],
+  ['三司', '直白说，三司先看钱从哪里来、够不够花。'],
+  ['台谏', '直白说，台谏最怕政令扰民又无人负责。'],
+  ['州县', '直白说，州县在意人手和期限能否撑住。'],
+  ['豪强', '直白说，地方豪强会先算自己损失多少。'],
+  ['百姓', '直白说，百姓只看负担是否真的减轻。'],
+]);
+
+function addPlainReactionLead(label, value) {
+  const text = localizeInternalTerms(value);
+  if (/^(直白说|简单说|说白了)，/.test(text)) return text;
+  const lead = plainReactionLeads.get(label) || `直白说，${label}先看这道政令如何影响自身。`;
+  return `${lead}${text}`;
+}
+
+function ensureRevenueMeasure(value) {
+  const draft = localizeInternalTerms(value);
+  if (/(开源|商税漏征|常平仓本钱|榷货|茶盐|关市岁入)/.test(draft)) return draft;
+  const separator = draft && !/[。！？]$/.test(draft) ? '。' : '';
+  return `${draft}${separator}另令三司清查商税漏征，以补收旧额为开源，不得加派新税，不得转嫁民户，月终具数复奏。`;
+}
+
 const outputLanguageRule = `输入中的英文键名和连字符ID都是程序内部标识，只供你理解，绝不能原样写进面向玩家的文字。
 必须使用中文称呼：treasury=国库，politicalCapital=政略，administration=行政，finance=财用，livelihood=民生，defense=边备，courtSupport=士论，execution=执行，severity=严重度。不要输出类似 courtSupport-3、severity66、executionBonus+2 的调试式表达。`;
 
@@ -104,6 +127,7 @@ ${allowedOfficers.map(([id, name]) => `- ${id}: ${name}`).join('\n')}
 }
 
 export async function adviseWithAI({ question, currentEdict = '', state = {}, event = {}, officer = {}, policies = [], config = {}, fetchImpl = fetch } = {}) {
+  const administrativeRemaining = Math.max(0, Math.round(Number(state?.resources?.administration) || 0));
   const policyBudget = policies.map((policy) => ({
     id: policy?.id,
     name: policy?.name,
@@ -125,12 +149,14 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 玩家案前已有文字：${String(currentEdict || '').trim() || '尚未落笔'}
 玩家向辅政官询问：${String(question || '').trim() || '请分析当前格局并提出几条可行路线'}
 
-一份诏书可以包含目标、措施、执行官、推行力度和取舍底线，但默认只安排一项主政务与至多一项配套政务。除非玩家明确要求全面强推且资源充足，不得在草诏中同时触发三项以上政务。起草前须在内部核算政略、行政与国库成本：总政略成本还要加上执行官一次性的政略消耗修正；结算后须至少保留 12 点政略、10 点行政和 800 万贯国库。资源不足时应缩小范围、改为试点或先核查复奏，不得把所有困境一次塞进诏书。还要结合剩余回合与未完成国策，形成能逐步取得成果的节奏，而不是只追逐本期数值。不要把建议压成固定选项，也不要假装存在唯一正确答案。诏书草案应具体到对象、措施、监督、例外与复奏期限，符合北宋制度语境，且避免顺带写入会触发无关政务的措施。
+格局判断的第一句必须逐字采用“行政余量实有 ${administrativeRemaining} 点。”随后只能明确主推一个方向，不能把财政、民生、边防、吏治等方向并列为同等优先，也不许用“均需兼顾”“视情况而定”回避取舍。可以列出至多两条路线供比较，但必须把第一条标为主推路线。
+
+一份诏书可以包含目标、措施、执行官、推行力度和取舍底线，但默认只安排一项主政务与至多一项配套政务。除非玩家明确要求全面强推且资源充足，不得在草诏中同时触发三项以上政务。起草前须在内部核算政略、行政与国库成本：总政略成本还要加上执行官一次性的政略消耗修正；结算后须至少保留 12 点政略、10 点行政和 800 万贯国库。资源不足时应缩小范围、改为试点或先核查复奏，不得把所有困境一次塞进诏书。草诏至少写入一项具体的开源措施，例如清查商税漏征、盘活常平仓本钱或整顿榷货收入；单纯裁减支出不算开源，且不得借开源向民户加派。还要结合剩余回合与未完成国策，形成能逐步取得成果的节奏，而不是只追逐本期数值。诏书草案应具体到对象、措施、监督、例外与复奏期限，符合北宋制度语境，且避免顺带写入会触发无关政务的措施。
 
 只返回JSON：
 {
-  "situation":"用一段自然语言解释眼前最关键的矛盾以及它们如何互相牵连",
-  "priorities":["当前最值得先处理的两至四项事项"],
+  "situation":"第一句报行政余量实数，第二句明确唯一主推方向，再解释关键矛盾",
+  "priorities":["第一项必须是唯一主推事项，其后至多一项配套事项"],
   "options":[{"title":"路线名称","benefit":"可能获得什么","risk":"要付出什么或可能怎样变形"}],
   "policyIds":["草诏明确采用的一至两个政务ID"],
   "draftEdict":"一份可直接放入御案、但仍由玩家修改定稿的完整诏书草案",
@@ -143,24 +169,39 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 4. 把财政、民生、边防、吏治、士论、官员能力和执行风险联系起来。
 5. 可引用人物立场，但不得把人物简单判为忠臣或奸臣。
 6. 必须优先保证草诏在当前政略与行政预算内可持续执行；默认一主一辅，不得用堆叠政务伪装周全。
-7. 输出必须为JSON。
-8. ${outputLanguageRule}`;
+7. 格局判断必须报出行政余量实数、明确唯一主推方向；不得面面俱到，不得用含糊措辞拒绝取舍。
+8. 草诏必须包含至少一项不向民户加派的具体开源措施，不能只写节流。
+9. 输出必须为JSON。
+10. ${outputLanguageRule}`;
   const output = await callModel(config, system, prompt, fetchImpl);
   const parsed = parseJsonOutput(output);
   const policyIds = Array.isArray(parsed.policyIds)
     ? [...new Set(parsed.policyIds.filter((id) => allowedPolicies.some(([allowed]) => allowed === id)))].slice(0, 2)
     : [];
   if (!policyIds.length && String(parsed.draftEdict || '').trim()) policyIds.push('open-ended-directive');
+  const explicitRevenuePolicies = new Set(['green-sprouts-trial', 'service-reform-preparation', 'water-conservancy', 'open-ended-directive']);
+  if (!policyIds.some((id) => explicitRevenuePolicies.has(id))) {
+    if (policyIds.length >= 2) policyIds.pop();
+    policyIds.push('open-ended-directive');
+  }
+  const priorities = parseStringList(parsed.priorities, 2);
+  const options = Array.isArray(parsed.options)
+    ? parsed.options.map((item) => ({ title: localizeInternalTerms(item?.title), benefit: localizeInternalTerms(item?.benefit), risk: localizeInternalTerms(item?.risk) })).filter((item) => item.title && item.benefit && item.risk).slice(0, 2)
+    : [];
+  const mainDirection = priorities[0] || options[0]?.title || policyIds.map((id) => allowedPolicies.find(([allowed]) => allowed === id)?.[1]).find(Boolean) || '先稳住本期急务';
+  const situationBody = localizeInternalTerms(parsed.situation)
+    .replace(/^行政余量实有\s*\d+\s*点。?/, '')
+    .replace(/^主推方向[：:]\s*[^。]+。?/, '')
+    .replace(/[^。！？]*(?:均需兼顾|都值得兼顾|全面兼顾|视情况而定)[。！？]?/g, '')
+    .trim() || '其余事项仅作配套，不在本回合并列推进。';
   return {
     ok: true,
     advice: {
-      situation: localizeInternalTerms(parsed.situation),
-      priorities: parseStringList(parsed.priorities, 4),
-      options: Array.isArray(parsed.options)
-        ? parsed.options.map((item) => ({ title: localizeInternalTerms(item?.title), benefit: localizeInternalTerms(item?.benefit), risk: localizeInternalTerms(item?.risk) })).filter((item) => item.title && item.benefit && item.risk).slice(0, 3)
-        : [],
+      situation: `行政余量实有 ${administrativeRemaining} 点。主推方向：${mainDirection}。${situationBody}`,
+      priorities,
+      options,
       policyIds,
-      draftEdict: localizeInternalTerms(parsed.draftEdict),
+      draftEdict: ensureRevenueMeasure(parsed.draftEdict),
       cautions: parseStringList(parsed.cautions, 5),
     },
   };
@@ -182,6 +223,8 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
 此前六回合档案：${formatHistory(history)}
 
 你的任务不是再次计算输赢，而是解释这些既定变化如何在北宋国家机器中发生。必须体现诏令由御前发出后，经过中书门下、三司或枢密院、监司、州县和胥吏的传递与变形；结合执行官的性格、行事方式、政治底线和语言风格。官员之间存在制度判断与利益冲突，不得写成忠臣与奸臣的简单对立。
+
+每条各方回奏的 text 第一行必须先用一句不超过二十二字的现代白话说清“这对该方意味着什么”，再接制度细节；不要一上来就写公文腔。
 
 只返回JSON，不得附加Markdown：
 {
@@ -214,7 +257,10 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
       situationUpdate: localizeInternalTerms(parsed.situationUpdate),
       implementation: parsePairs(parsed.implementation, 'stage'),
       reactions: Array.isArray(parsed.reactions)
-        ? parsed.reactions.map((item) => ({ label: localizeInternalTerms(item?.label), text: localizeInternalTerms(item?.text) })).filter((item) => item.label && item.text).slice(0, 8)
+        ? parsed.reactions.map((item) => {
+          const label = localizeInternalTerms(item?.label);
+          return { label, text: addPlainReactionLead(label, item?.text) };
+        }).filter((item) => item.label && item.text).slice(0, 8)
         : [],
       nominations: Array.isArray(parsed.nominations)
         ? parsed.nominations.map((item) => ({ name: localizeInternalTerms(item?.name), role: localizeInternalTerms(item?.role), stance: localizeInternalTerms(item?.stance), assessment: localizeInternalTerms(item?.assessment) })).filter((item) => item.name && item.role && item.assessment).slice(0, 2)

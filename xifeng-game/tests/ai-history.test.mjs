@@ -89,10 +89,51 @@ describe('AI史实推理边界', () => {
     expect(prompt).toContain('当前国策成果');
     expect(prompt).toContain('对勘官署账簿');
     expect(prompt).toContain('"politicalCapital":4');
+    expect(prompt).toContain('格局判断的第一句必须逐字采用“行政余量实有 30 点。”');
+    expect(prompt).toContain('只能明确主推一个方向');
+    expect(prompt).toContain('至少写入一项具体的开源措施');
     expect((await adviseWithAI({
       state: { resources: { politicalCapital: 24, administration: 30, treasury: 4000 } },
       policies: [{ id: 'cross-check-ledgers', name: '对勘官署账簿', cost: {} }], config, fetchImpl,
-    })).advice.policyIds).toEqual(['cross-check-ledgers']);
+    })).advice.policyIds).toEqual(['cross-check-ledgers', 'open-ended-directive']);
+  });
+
+  it('辅政官输出强制补足行政实数、单一主推方向与开源措施', async () => {
+    const fetchImpl = vi.fn(async () => mockResponse({
+      situation: '财政、民生、边防都值得兼顾。',
+      priorities: ['先核账'],
+      options: [{ title: '先核账', benefit: '厘清财计', risk: '见效稍慢' }],
+      policyIds: ['cross-check-ledgers'],
+      draftEdict: '诏遣使对勘账簿，限期复奏。',
+      cautions: [],
+    }));
+    const result = await adviseWithAI({
+      state: { resources: { politicalCapital: 24, administration: 27, treasury: 4000 } },
+      policies: [{ id: 'cross-check-ledgers', name: '对勘官署账簿', cost: {} }],
+      config,
+      fetchImpl,
+    });
+
+    expect(result.advice.situation).toMatch(/^行政余量实有 27 点。主推方向：先核账。/);
+    expect(result.advice.situation).not.toContain('都值得兼顾');
+    expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'open-ended-directive']);
+    expect(result.advice.draftEdict).toContain('开源');
+    expect(result.advice.draftEdict).toContain('不得转嫁民户');
+  });
+
+  it('各方回奏的第一句使用白话概括', async () => {
+    const fetchImpl = vi.fn(async () => mockResponse({
+      report: '州县奉诏施行。', situationUpdate: '财计稍定。', implementation: [],
+      reactions: [
+        { label: '三司', text: '具析岁入支用之数以闻。' },
+        { label: '百姓', text: '民户观望新令。' },
+      ],
+      nominations: [], institutionalChanges: [], nextWarnings: [], historicalNote: '',
+    }));
+    const result = await narrateSettlementWithAI({ edict: '核查财计', config, fetchImpl });
+
+    expect(result.narrative.reactions[0].text).toMatch(/^直白说，三司先看钱从哪里来、够不够花。/);
+    expect(result.narrative.reactions[1].text).toMatch(/^直白说，百姓只看负担是否真的减轻。/);
   });
 
   it('辅政官输出中的内部字段和ID统一转换为中文', async () => {

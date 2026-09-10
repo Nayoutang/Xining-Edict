@@ -5,7 +5,7 @@ import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, pr
 import type { AdvisorAdvice, AIConfig, CourtOfficeKey, CourtPostKey, DilemmaProgress, EdictInterpretation, GameState, HistoricalEvent, HistoricalNarrative, IndicatorKey, Officer, TurnRecord } from '..';
 import { GameScreen } from './GameScreen';
 import { paginate } from './pagination';
-import { localizeAdvisorAdvice, localizeDisplayText, localizeHistoricalNarrative } from './text-localization';
+import { addPlainReactionLead, localizeAdvisorAdvice, localizeDisplayText, localizeHistoricalNarrative } from './text-localization';
 
 type PanelName = 'dilemmas' | 'court' | 'archive' | 'records' | 'saves' | 'edict' | null;
 type DilemmaChange = 'new' | 'worse' | 'eased' | 'resolved';
@@ -732,12 +732,12 @@ function Result({ result, state, onClose }: {
       { stage: '部司承办', text: result.record.administrativeOverload > 0 ? `有司承办超出行政能力 ${result.record.administrativeOverload}，部分文移发生延宕。` : '有关部司依限具牒，调拨钱粮并交监司覆核。' },
       { stage: '州县落实', text: result.record.politicalOverdraft > 0 ? `政略透支 ${result.record.politicalOverdraft}，地方执行伴随更多观望与抵牾。` : '监司下达州县，按本地情形施行并候期复奏。' },
     ];
-  const reactions = narrative?.reactions.length
+  const reactions = (narrative?.reactions.length
     ? narrative.reactions.slice(0, 6)
     : [
       ...changes.slice(0, 4).map((text) => ({ label: text.split(' ')[0] ?? '国势', text: `本回结算记为 ${text}，后续影响将延续到下一期施政。` })),
       ...(reformDilemmas.length ? reformDilemmas.slice(0, 2).map((item) => ({ label: item.title, text: item.description })) : []),
-    ].slice(0, 6);
+    ].slice(0, 6)).map((reaction) => ({ ...reaction, text: addPlainReactionLead(reaction.label, reaction.text) }));
 
   return <div className="modal settlement-layer">
     <section className="settlement-result" aria-label="半年施政结算">
