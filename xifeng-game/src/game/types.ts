@@ -184,6 +184,7 @@ export interface GameState {
   dilemmas: DilemmaProgress[];
   polity: PolityState;
   history: TurnRecord[];
+  advisorHistory?: string[];
   ended: boolean;
   ending: Ending | null;
 }

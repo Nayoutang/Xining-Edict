@@ -84,12 +84,42 @@ function addPlainReactionLead(label, value) {
   return `${lead}${text}`;
 }
 
+function looksLikeAdvisorOutline(value) {
+  const text = String(value || '').replace(/\r/g, '');
+  const dimensionLines = text.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) || [];
+  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(text);
+  return dimensionLines.length >= 3 || (hasCapacity && dimensionLines.length >= 2);
+}
+
 const advisorDimensions = [
-  { name: '财政', scope: '国库与岁入', fallback: '核对三司账簿，限一月具报岁入实数。', policyId: 'cross-check-ledgers', allowed: ['green-sprouts-trial', 'service-reform-preparation', 'reduce-redundant-spending', 'cross-check-ledgers'] },
-  { name: '民生', scope: '百姓负担', fallback: '核查民户实负，灾伤户暂缓催征。', policyId: 'curb-local-exactions', allowed: ['green-sprouts-trial', 'service-reform-preparation', 'water-conservancy', 'curb-local-exactions'] },
-  { name: '军事', scope: '边备与军储', fallback: '军储未清，先核陕西见粮再议增兵。', policyId: 'northwest-defense', allowed: ['northwest-defense'] },
-  { name: '吏治', scope: '诏令能否落到州县', fallback: '逐级核验州县执行，限一月复奏。', policyId: 'curb-local-exactions', allowed: ['curb-local-exactions', 'review-impeachments', 'cross-check-ledgers', 'discipline-corrupt-officials'] },
+  {
+    name: '财政', scope: '国库与岁入', policyId: 'cross-check-ledgers', indicator: 'finance',
+    allowed: ['green-sprouts-trial', 'service-reform-preparation', 'reduce-redundant-spending', 'cross-check-ledgers'],
+    actions: ['核清三司岁入底数，旬末具报。', '按路核验实收差额，月内结案。', '比较新法钱谷首轮实收，剔除虚数。', '追查账实不符款项，责主司说明。', '据中期账案收窄支用，保留赈备。', '清理积欠与虚冒，分路销账。', '复核历年财计成效，补足缺口。', '结清未决钱谷，封存终局账册。'],
+  },
+  {
+    name: '民生', scope: '百姓负担', policyId: 'curb-local-exactions', indicator: 'livelihood',
+    allowed: ['green-sprouts-trial', 'service-reform-preparation', 'water-conservancy', 'curb-local-exactions'],
+    actions: ['核定灾伤户实负，分等造册。', '抽查青苗抑配，退还强敛钱物。', '比较诸路役钱轻重，先纠偏重县。', '核验水利受益户，减免无益之费。', '追查加派名目，责监司逐项销除。', '复核贫户减负实数，纠正漏免。', '清理遗留役债，禁止重复催科。', '汇总民户实负，办结未清申诉。'],
+  },
+  {
+    name: '军事', scope: '边备与军储', policyId: 'northwest-defense', indicator: 'defense',
+    allowed: ['northwest-defense'],
+    actions: ['盘点陕西军储缺口，十日具报。', '核对寨堡见粮，先补紧要处。', '查明转运迟滞路段，限期疏通。', '按边警轻重调剂军粮，不另增额。', '核验军需实到数，追查途中亏耗。', '补足关键寨堡月粮，暂停虚领。', '复查边备薄弱处，集中现有兵力。', '结清军储缺额，留足善后之用。'],
+  },
+  {
+    name: '吏治', scope: '诏令能否落到州县', policyId: 'curb-local-exactions', indicator: 'execution',
+    allowed: ['curb-local-exactions', 'review-impeachments', 'cross-check-ledgers', 'discipline-corrupt-officials'],
+    actions: ['梳理州县文移，列明承办官。', '抽验三路奉行实况，月内复奏。', '对照诏令与案牍，查出擅改条目。', '追究积压公文，责监司定期销案。', '按执行偏差分责，不作泛察。', '复核已劾官吏证据，依法结案。', '清理州县未结事项，逐件回奏。', '汇总奉行成效，处分失职官吏。'],
+  },
 ];
+
+const pausedReasons = {
+  财政: ['国库尚可支应，本期急务在别处。', '财计波动有限，本期主辅另有短板。', '主辅成本已定，本期财力不宜分散。', '国库尚须留备，本期不宜另开财务。', '现有岁入可承，本期财政并非急项。', '本期主务耗资较多，财计余地有限。', '历年财计趋稳，本期更急者在他项。', '终局财力尚足，本期无需另占余量。'],
+  民生: ['民户负担尚稳，本期急务不在民生。', '前令成效未定，本期不宜再扰民户。', '州县承载已紧，本期民务不宜并举。', '民生波动有限，本期尚非最急短板。', '当前实负未恶化，本期可让位主务。', '主辅已有更急方向，本期民务宜缓。', '既有减负尚在显效，本期无需叠加。', '终局民情可持，本期余量宜顾他项。'],
+  军事: ['边警未至急迫，本期财力宜顾主务。', '军储尚可支应，本期边务并非短板。', '边情未见骤变，本期无需占用余量。', '现有寨堡可守，本期急务另有所属。', '军需压力可控，本期主辅不在边备。', '本期内政更急，边务暂无迫切之势。', '边备已稍稳，本期不宜分散国力。', '终局边情可持，本期无需另列实务。'],
+  吏治: ['地方承载尚可，本期不宜叠加事务。', '有司余力已紧，本期应留主务。', '前令尚在消化，本期吏治并非首急。', '地方未见新壅，本期无需另占余量。', '现有承办尚稳，本期急务在别项。', '州县压力可控，本期不宜再添事务。', '执行已见改善，本期可让位更弱国势。', '终局承载尚足，本期无需另列吏务。'],
+};
 
 function conciseSentence(value, fallback, maxLength = 24) {
   const cleaned = localizeInternalTerms(value)
@@ -103,7 +133,19 @@ function conciseSentence(value, fallback, maxLength = 24) {
   return /[。！？]$/.test(clipped) ? clipped : `${clipped}。`;
 }
 
-function normalizeAdvisorOutline(parsed, current, capacity) {
+function stageForTurn(turn, maxTurns) {
+  const ratio = turn / Math.max(1, maxTurns);
+  return ratio <= 0.3 ? '前期' : ratio <= 0.7 ? '中期' : '后期';
+}
+
+function pausedSentence(value, definition, turn, indicators = {}) {
+  void value;
+  void indicators;
+  const choices = pausedReasons[definition.name];
+  return choices[(turn - 1) % choices.length];
+}
+
+function normalizeAdvisorOutline(parsed, current, capacity, state = {}) {
   const source = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
   const byName = new Map(source.map((item) => [localizeInternalTerms(item?.name), item]));
   let mainName = advisorDimensions.find(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, '') === '主')?.name;
@@ -111,16 +153,27 @@ function normalizeAdvisorOutline(parsed, current, capacity) {
   let supportName = advisorDimensions.find(({ name }) => name !== mainName && localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, '') === '辅')?.name;
   if (!supportName) supportName = advisorDimensions.find(({ name }) => name !== mainName)?.name;
 
+  const turn = Math.max(1, Math.min(8, Math.round(Number(state?.turn) || 1)));
+  const previousPolicyIds = new Set((state?.history || []).flatMap((record) => record?.policyIds || []));
+  const previousAdvice = (state?.advisorHistory || []).join('\n');
   const dimensions = advisorDimensions.map((definition) => {
     const item = byName.get(definition.name) || {};
     const role = definition.name === mainName ? '主' : definition.name === supportName ? '辅' : '暂缓';
     const requestedPolicyId = String(item?.policyId || '');
     const policyId = definition.allowed.includes(requestedPolicyId) ? requestedPolicyId : definition.policyId;
+    const fallback = definition.actions[turn - 1] || definition.actions.at(-1);
+    let advice = role === '暂缓'
+      ? pausedSentence(item?.advice, definition, turn, state?.indicators)
+      : conciseSentence(item?.advice, fallback);
+    const repeatedSuggestion = role !== '暂缓' && previousAdvice.includes(advice.replace(/[。！？]$/, ''));
+    if (role !== '暂缓' && (previousPolicyIds.has(policyId) || repeatedSuggestion)) {
+      advice = conciseSentence(previousPolicyIds.has(policyId) ? `续办，${fallback}` : fallback, fallback);
+    }
     return {
       name: definition.name,
       scope: definition.scope,
       role,
-      advice: conciseSentence(item?.advice, definition.fallback),
+      advice,
       policyId,
     };
   });
@@ -149,6 +202,19 @@ const outputLanguageRule = `输入中的英文键名和连字符ID都是程序�
 必须使用中文称呼：treasury=国库，politicalCapital=政略，administration=行政，finance=财用，livelihood=民生，defense=边备，courtSupport=士论，execution=执行，severity=严重度。不要输出类似 courtSupport-3、severity66、executionBonus+2 的调试式表达。`;
 
 export async function interpretEdictWithAI({ edict, context = {}, config = {}, fetchImpl = fetch } = {}) {
+  const sourceEdict = String(edict || '').trim();
+  if (looksLikeAdvisorOutline(sourceEdict)) {
+    return {
+      ok: true,
+      interpretation: {
+        sourceText: sourceEdict,
+        policyIds: [],
+        officerId: null,
+        summary: '',
+        warnings: ['辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。'],
+      },
+    };
+  }
   const prompt = `你是北宋熙宁变法策略游戏的中书舍人。将玩家自由诏书映射为全部相关的游戏规则政务，不设置人为数量上限；一份诏书可以同时涉及财政、民生、军事、任免、制度和地方治理。不得创造ID，不得修改数值，执行能力不足由程序结算为行政超载。
 
 允许的政务：
@@ -191,16 +257,31 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
     administration: policy?.cost?.administration ?? 0,
     treasury: policy?.cost?.treasury ?? 0,
   }));
+  const currentTurn = Math.max(1, Number(state?.turn || 1));
+  const maxTurns = Math.max(currentTurn, Number(state?.maxTurns || 8));
+  const remainingTurns = Math.max(0, maxTurns - currentTurn + 1);
+  const stage = stageForTurn(currentTurn, maxTurns);
+  const completedObjectives = (state?.objectives || []).filter((item) => item?.completed).map((item) => item.title);
+  const activeItems = (state?.activePolicies || []).map((item) => ({
+    政务: allowedPolicies.find(([id]) => id === item?.policyId)?.[1] || item?.policyId,
+    承办: allowedOfficers.find(([id]) => id === item?.officerId)?.[1] || item?.officerId,
+    尚余回合: item?.remainingTurns,
+  }));
   const prompt = `你在宋神宗熙宁朝担任御前辅政官。玩家尚未颁诏，你只负责提供分维度施政提纲，绝不能代写完整诏书，也不能替玩家作最终决定。
 
 当前时间：${formatDate(state?.date)}
-当前急务：${JSON.stringify(event)}
-当前国势：${JSON.stringify({ indicators: state?.indicators, resources: state?.resources, dilemmas: state?.dilemmas, polity: state?.polity })}
-当前国策成果：${JSON.stringify(state?.objectives || [])}
-剩余回合：${Math.max(0, Number(state?.maxTurns || 8) - Number(state?.turn || 1) + 1)}
+当前回合：第${currentTurn}/${maxTurns}回；距终局尚余${remainingTurns}回；阶段：${stage}
+五项国势：财用${state?.indicators?.finance ?? '未知'}，民生${state?.indicators?.livelihood ?? '未知'}，边备${state?.indicators?.defense ?? '未知'}，士论${state?.indicators?.courtSupport ?? '未知'}，执行${state?.indicators?.execution ?? '未知'}
+当前余量：行政${administrativeRemaining}/${administrativeCapacity}，政略${state?.resources?.politicalCapital ?? '未知'}，国库${state?.resources?.treasury ?? '未知'}万贯
+当前国策成果（已完成）：${completedObjectives.length ? completedObjectives.join('、') : '暂无'}
+进行中事项：${activeItems.length ? JSON.stringify(activeItems) : '暂无'}
+本回合困境事件：${event?.title || '未载'}——${event?.description || '未载'}；即时影响${JSON.stringify(event?.effects || {})}
+当前其他困境：${JSON.stringify(state?.dilemmas || [])}
 当前准备任用的执行官：${JSON.stringify(officer)}
 可执行政务及其本回合成本：${JSON.stringify(policyBudget)}
-此前政令：${formatHistory(state?.history || [])}
+此前各回诏令与结算（不得忽略）：
+${formatHistory(state?.history || [])}
+此前辅政官已提方向（不得原句重提）：${(state?.advisorHistory || []).slice(-6).join('\n') || '无。'}
 玩家案前已有文字：${String(currentEdict || '').trim() || '尚未落笔'}
 玩家向辅政官询问：${String(question || '').trim() || '请分析当前格局并提出几条可行路线'}
 
@@ -215,6 +296,8 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 人事:一句话人事建议
 
 四个维度必须全部列出，顺序固定为财政、民生、军事、吏治。【主】和【辅】各且仅出现一次，其余两项必须标【暂缓】。每个维度最多一条建议，严禁面面俱到。建议必须具体到动作、对象或期限，例如“核对三司账簿，限期一月”，不得写“宜稳妥推进”“酌情办理”“视情况而定”等空话。人事建议单独一行，不占维度名额；无须调整人事时写“暂无调任建议”。显示文本总长度不得超过二百字。保留克制的文言语感，但提纲以简洁为先，不写骈句。
+
+不得重复此前回合已经提出或颁行的建议方向。若同一事务确须延续，必须以“续办”开头，并明确本期新增着力点，不得原句重述。建议必须针对本期数值短板与困境；士论偏低时须考虑缓和朝议或收窄推行力度。${stage === '前期' ? '当前为前期，重在核清底数与小范围试办。' : stage === '中期' ? '当前为中期，重在推行、核验与纠偏。' : '当前为后期，重在巩固成果、结清遗留与善后。'}【暂缓】项只准说明“为何本期不做”，严禁写任何动作、对象或期限。
 
 你须在内部核算政略、行政与国库成本：总政略成本还要加上执行官一次性的政略消耗修正；结算后须至少保留 12 点政略、10 点行政和 800 万贯国库。资源不足时，将高成本方向列为【暂缓】，不得堆叠政务伪装周全。只提出脚手架，不得输出诏书正文、制曰、奉诏、钦此等成稿措辞。
 
@@ -243,7 +326,7 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
   const parsed = parseJsonOutput(output);
   return {
     ok: true,
-    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity),
+    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity, state),
   };
 }
 
@@ -440,7 +523,12 @@ function formatDate(date) {
 
 function formatHistory(history) {
   if (!Array.isArray(history) || !history.length) return '无。';
-  return history.slice(-6).map((turn) => `第${turn.turn}回：诏书“${turn.edictText || '未录原文'}”；既有结果“${turn.aiSummary || turn.eventTitle || '未录'}”`).join('\n');
+  return history.slice(-6).map((turn) => {
+    const policies = (turn.policyIds || []).map((id) => allowedPolicies.find(([allowed]) => allowed === id)?.[1] || id).join('、') || '未识别';
+    const indicatorChanges = localizeInternalTerms(JSON.stringify(turn.indicatorChanges || {}));
+    const resourceChanges = localizeInternalTerms(JSON.stringify(turn.resourceChanges || {}));
+    return `第${turn.turn}回：核心诏令“${turn.edictText || '未录原文'}”；施行政务“${policies}”；国势变化${indicatorChanges}；余量变化${resourceChanges}；行政超载${turn.administrativeOverload || 0}、政略透支${turn.politicalOverdraft || 0}；结算“${turn.aiSummary || turn.eventTitle || '未录'}”`;
+  }).join('\n');
 }
 
 function parsePairs(value, labelKey) {

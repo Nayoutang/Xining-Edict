@@ -69,6 +69,18 @@ describe('AI史实推理边界', () => {
     expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
+  it('服务端在调用模型前拦截直接粘贴的参详提纲', async () => {
+    const fetchImpl = vi.fn();
+    const result = await interpretEdictWithAI({
+      edict: '行政余量:40/50\n\n财政|(国库与岁入)【主】核清账簿。\n民生|(百姓负担)【辅】核定实负。\n军事|(边备与军储)【暂缓】边警尚缓。\n吏治|(诏令能否落到州县)【暂缓】有司方忙。',
+      config,
+      fetchImpl,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.interpretation.policyIds).toEqual([]);
+    expect(result.interpretation.warnings[0]).toContain('不能直接作为诏书');
+  });
+
   it('辅政官收到政务成本并被要求保持一主一辅的可持续预算', async () => {
     let requestBody;
     const fetchImpl = vi.fn(async (_url, options) => {
@@ -162,6 +174,63 @@ describe('AI史实推理边界', () => {
       expect(advice.outline).toContain(`行政余量:${40 - index}/50`);
       expect(advice.outline.length).toBeLessThanOrEqual(200);
     }
+  });
+
+  it('连续八回合注入实时局势并避免重复建议，暂缓项不夹带指令', async () => {
+    let lastPrompt = '';
+    const fetchImpl = vi.fn(async (_url, options) => {
+      lastPrompt = JSON.parse(options.body).messages.map((message) => message.content).join('\n');
+      return mockResponse({
+        dimensions: [
+          { name: '财政', role: '主', advice: '核对三司账簿，限一月具报', policyId: 'cross-check-ledgers' },
+          { name: '民生', role: '辅', advice: '核查民户实负，灾伤户缓征', policyId: 'curb-local-exactions' },
+          { name: '军事', role: '暂缓', advice: '命陕西转运司十日内盘点军储', policyId: 'northwest-defense' },
+          { name: '吏治', role: '暂缓', advice: '逐级核验州县执行，限一月复奏', policyId: 'review-impeachments' },
+        ],
+        personnel: '暂无调任建议',
+      });
+    });
+    const activeAdvice = [];
+    const adviceByDimension = new Map(['财政', '民生', '军事', '吏治'].map((name) => [name, new Set()]));
+    for (let turn = 1; turn <= 8; turn += 1) {
+      const history = Array.from({ length: turn - 1 }, (_, index) => ({
+        turn: index + 1,
+        edictText: `第${index + 1}回核账恤民诏`,
+        policyIds: ['cross-check-ledgers', 'curb-local-exactions'],
+        indicatorChanges: { finance: 2, livelihood: 1 },
+        resourceChanges: { administration: -4 },
+        administrativeOverload: 0,
+        politicalOverdraft: 0,
+        aiSummary: `第${index + 1}回账案已有进展`,
+      }));
+      const { advice } = await adviseWithAI({
+        state: {
+          turn, maxTurns: 8, date: { reignYear: 1 + Math.floor((turn - 1) / 2), half: turn % 2 ? 1 : 2 },
+          indicators: { finance: 40 + turn, livelihood: 38 + turn, defense: 50, courtSupport: 34, execution: 43 },
+          resources: { administration: 41 - turn, politicalCapital: 44 - turn, treasury: 5600 - turn * 100 },
+          objectives: [{ title: '财计有序', completed: turn >= 4 }],
+          activePolicies: turn > 1 ? [{ policyId: 'cross-check-ledgers', officerId: 'zeng-bu', remainingTurns: 1 }] : [],
+          dilemmas: [{ title: '朝议纷争', severity: 60, description: '士论偏低' }], history,
+        },
+        event: { title: `第${turn}回急务`, description: `本期事件${turn}`, effects: { courtSupport: -2 } },
+        config, fetchImpl,
+      });
+      activeAdvice.push(advice.dimensions.filter((item) => item.role !== '暂缓').map((item) => item.advice).join('|'));
+      for (const item of advice.dimensions) adviceByDimension.get(item.name).add(item.advice);
+      for (const item of advice.dimensions.filter((entry) => entry.role === '暂缓')) {
+        expect(item.advice).not.toMatch(/核对|核查|命令|限期|试行|推行|增兵|整顿|复奏|清理|兴修|裁减|缓征|督促|调拨|处分|十日|一月|月内|旬末/);
+      }
+      if (turn > 1) expect(advice.dimensions.filter((item) => item.role !== '暂缓').every((item) => item.advice.startsWith('续办'))).toBe(true);
+    }
+    expect(new Set(activeAdvice).size).toBe(8);
+    for (const suggestions of adviceByDimension.values()) expect(suggestions.size).toBe(8);
+    expect(lastPrompt).toContain('当前回合：第8/8回；距终局尚余1回；阶段：后期');
+    expect(lastPrompt).toContain('五项国势：财用48，民生46，边备50，士论34，执行43');
+    expect(lastPrompt).toContain('进行中事项');
+    expect(lastPrompt).toContain('第7回核账恤民诏');
+    expect(lastPrompt).toContain('国势变化');
+    expect(lastPrompt).toContain('本回合困境事件：第8回急务');
+    expect(lastPrompt).toContain('【暂缓】项只准说明“为何本期不做”');
   });
 
   it('各方回奏的第一句使用白话概括', async () => {

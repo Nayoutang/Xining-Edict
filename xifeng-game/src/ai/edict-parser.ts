@@ -13,7 +13,7 @@ const policyPatterns: Array<{ policyId: string; patterns: RegExp[] }> = [
   { policyId: 'green-sprouts-trial', patterns: [/青苗/, /常平仓/, /青黄不接/, /贷.*农/] },
   { policyId: 'service-reform-preparation', patterns: [/募役/, /免役/, /差役/, /以钱代役/, /役钱/] },
   { policyId: 'water-conservancy', patterns: [/水利/, /河渠/, /陂塘/, /灌溉/, /修堤/] },
-  { policyId: 'curb-local-exactions', patterns: [/摊派/, /抑配/, /强征/, /胥吏/, /监司.*查/, /查禁/, /整顿吏治/, /地方执行/, /州县.*执行/, /诏令.*(?:落到|落实).*州县/] },
+  { policyId: 'curb-local-exactions', patterns: [/摊派/, /抑配/, /强征/, /胥吏/, /监司.*(?:查|抽验)/, /查禁/, /整顿吏治/, /地方执行/, /州县.*(?:执行|奉行)/, /诏令.*(?:落到|落实).*州县/] },
   { policyId: 'reduce-redundant-spending', patterns: [/冗费/, /营造/, /宫观/, /裁减.*费/, /节用/, /虚冒/] },
   { policyId: 'northwest-defense', patterns: [/西北/, /陕西/, /边备/, /军粮/, /寨堡/, /西夏/] },
   { policyId: 'review-impeachments', patterns: [/弹章/, /弹劾/, /台谏.*复核/, /具名列证/, /查.*指控/] },
@@ -21,10 +21,26 @@ const policyPatterns: Array<{ policyId: string; patterns: RegExp[] }> = [
   { policyId: 'discipline-corrupt-officials', patterns: [/黜.*奸/, /罢免.*贪/, /追赃/, /惩治.*贪/, /依法.*黜/, /驱逐.*奸/] },
 ];
 
+export function isAdvisorOutline(text: string): boolean {
+  const normalized = text.replace(/\r/g, '');
+  const dimensionLines = normalized.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) ?? [];
+  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(normalized);
+  return dimensionLines.length >= 3 || (hasCapacity && dimensionLines.length >= 2);
+}
+
 export function parseEdict(text: string): EdictInterpretation {
   const sourceText = text.trim();
   if (!sourceText) {
     return { sourceText, policyIds: [], officerId: null, summary: '', warnings: ['诏书尚未落笔。'] };
+  }
+  if (isAdvisorOutline(sourceText)) {
+    return {
+      sourceText,
+      policyIds: [],
+      officerId: null,
+      summary: '',
+      warnings: ['辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。'],
+    };
   }
 
   const matches = policyPatterns

@@ -97,35 +97,94 @@ function addPlainReactionLead(label, value) {
   if (text.startsWith(lead)) return text;
   return `${lead}${text}`;
 }
+function looksLikeAdvisorOutline(value) {
+  const text = String(value || "").replace(/\r/g, "");
+  const dimensionLines = text.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) || [];
+  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(text);
+  return dimensionLines.length >= 3 || hasCapacity && dimensionLines.length >= 2;
+}
 var advisorDimensions = [
-  { name: "\u8D22\u653F", scope: "\u56FD\u5E93\u4E0E\u5C81\u5165", fallback: "\u6838\u5BF9\u4E09\u53F8\u8D26\u7C3F\uFF0C\u9650\u4E00\u6708\u5177\u62A5\u5C81\u5165\u5B9E\u6570\u3002", policyId: "cross-check-ledgers", allowed: ["green-sprouts-trial", "service-reform-preparation", "reduce-redundant-spending", "cross-check-ledgers"] },
-  { name: "\u6C11\u751F", scope: "\u767E\u59D3\u8D1F\u62C5", fallback: "\u6838\u67E5\u6C11\u6237\u5B9E\u8D1F\uFF0C\u707E\u4F24\u6237\u6682\u7F13\u50AC\u5F81\u3002", policyId: "curb-local-exactions", allowed: ["green-sprouts-trial", "service-reform-preparation", "water-conservancy", "curb-local-exactions"] },
-  { name: "\u519B\u4E8B", scope: "\u8FB9\u5907\u4E0E\u519B\u50A8", fallback: "\u519B\u50A8\u672A\u6E05\uFF0C\u5148\u6838\u9655\u897F\u89C1\u7CAE\u518D\u8BAE\u589E\u5175\u3002", policyId: "northwest-defense", allowed: ["northwest-defense"] },
-  { name: "\u540F\u6CBB", scope: "\u8BCF\u4EE4\u80FD\u5426\u843D\u5230\u5DDE\u53BF", fallback: "\u9010\u7EA7\u6838\u9A8C\u5DDE\u53BF\u6267\u884C\uFF0C\u9650\u4E00\u6708\u590D\u594F\u3002", policyId: "curb-local-exactions", allowed: ["curb-local-exactions", "review-impeachments", "cross-check-ledgers", "discipline-corrupt-officials"] }
+  {
+    name: "\u8D22\u653F",
+    scope: "\u56FD\u5E93\u4E0E\u5C81\u5165",
+    policyId: "cross-check-ledgers",
+    indicator: "finance",
+    allowed: ["green-sprouts-trial", "service-reform-preparation", "reduce-redundant-spending", "cross-check-ledgers"],
+    actions: ["\u6838\u6E05\u4E09\u53F8\u5C81\u5165\u5E95\u6570\uFF0C\u65EC\u672B\u5177\u62A5\u3002", "\u6309\u8DEF\u6838\u9A8C\u5B9E\u6536\u5DEE\u989D\uFF0C\u6708\u5185\u7ED3\u6848\u3002", "\u6BD4\u8F83\u65B0\u6CD5\u94B1\u8C37\u9996\u8F6E\u5B9E\u6536\uFF0C\u5254\u9664\u865A\u6570\u3002", "\u8FFD\u67E5\u8D26\u5B9E\u4E0D\u7B26\u6B3E\u9879\uFF0C\u8D23\u4E3B\u53F8\u8BF4\u660E\u3002", "\u636E\u4E2D\u671F\u8D26\u6848\u6536\u7A84\u652F\u7528\uFF0C\u4FDD\u7559\u8D48\u5907\u3002", "\u6E05\u7406\u79EF\u6B20\u4E0E\u865A\u5192\uFF0C\u5206\u8DEF\u9500\u8D26\u3002", "\u590D\u6838\u5386\u5E74\u8D22\u8BA1\u6210\u6548\uFF0C\u8865\u8DB3\u7F3A\u53E3\u3002", "\u7ED3\u6E05\u672A\u51B3\u94B1\u8C37\uFF0C\u5C01\u5B58\u7EC8\u5C40\u8D26\u518C\u3002"]
+  },
+  {
+    name: "\u6C11\u751F",
+    scope: "\u767E\u59D3\u8D1F\u62C5",
+    policyId: "curb-local-exactions",
+    indicator: "livelihood",
+    allowed: ["green-sprouts-trial", "service-reform-preparation", "water-conservancy", "curb-local-exactions"],
+    actions: ["\u6838\u5B9A\u707E\u4F24\u6237\u5B9E\u8D1F\uFF0C\u5206\u7B49\u9020\u518C\u3002", "\u62BD\u67E5\u9752\u82D7\u6291\u914D\uFF0C\u9000\u8FD8\u5F3A\u655B\u94B1\u7269\u3002", "\u6BD4\u8F83\u8BF8\u8DEF\u5F79\u94B1\u8F7B\u91CD\uFF0C\u5148\u7EA0\u504F\u91CD\u53BF\u3002", "\u6838\u9A8C\u6C34\u5229\u53D7\u76CA\u6237\uFF0C\u51CF\u514D\u65E0\u76CA\u4E4B\u8D39\u3002", "\u8FFD\u67E5\u52A0\u6D3E\u540D\u76EE\uFF0C\u8D23\u76D1\u53F8\u9010\u9879\u9500\u9664\u3002", "\u590D\u6838\u8D2B\u6237\u51CF\u8D1F\u5B9E\u6570\uFF0C\u7EA0\u6B63\u6F0F\u514D\u3002", "\u6E05\u7406\u9057\u7559\u5F79\u503A\uFF0C\u7981\u6B62\u91CD\u590D\u50AC\u79D1\u3002", "\u6C47\u603B\u6C11\u6237\u5B9E\u8D1F\uFF0C\u529E\u7ED3\u672A\u6E05\u7533\u8BC9\u3002"]
+  },
+  {
+    name: "\u519B\u4E8B",
+    scope: "\u8FB9\u5907\u4E0E\u519B\u50A8",
+    policyId: "northwest-defense",
+    indicator: "defense",
+    allowed: ["northwest-defense"],
+    actions: ["\u76D8\u70B9\u9655\u897F\u519B\u50A8\u7F3A\u53E3\uFF0C\u5341\u65E5\u5177\u62A5\u3002", "\u6838\u5BF9\u5BE8\u5821\u89C1\u7CAE\uFF0C\u5148\u8865\u7D27\u8981\u5904\u3002", "\u67E5\u660E\u8F6C\u8FD0\u8FDF\u6EDE\u8DEF\u6BB5\uFF0C\u9650\u671F\u758F\u901A\u3002", "\u6309\u8FB9\u8B66\u8F7B\u91CD\u8C03\u5242\u519B\u7CAE\uFF0C\u4E0D\u53E6\u589E\u989D\u3002", "\u6838\u9A8C\u519B\u9700\u5B9E\u5230\u6570\uFF0C\u8FFD\u67E5\u9014\u4E2D\u4E8F\u8017\u3002", "\u8865\u8DB3\u5173\u952E\u5BE8\u5821\u6708\u7CAE\uFF0C\u6682\u505C\u865A\u9886\u3002", "\u590D\u67E5\u8FB9\u5907\u8584\u5F31\u5904\uFF0C\u96C6\u4E2D\u73B0\u6709\u5175\u529B\u3002", "\u7ED3\u6E05\u519B\u50A8\u7F3A\u989D\uFF0C\u7559\u8DB3\u5584\u540E\u4E4B\u7528\u3002"]
+  },
+  {
+    name: "\u540F\u6CBB",
+    scope: "\u8BCF\u4EE4\u80FD\u5426\u843D\u5230\u5DDE\u53BF",
+    policyId: "curb-local-exactions",
+    indicator: "execution",
+    allowed: ["curb-local-exactions", "review-impeachments", "cross-check-ledgers", "discipline-corrupt-officials"],
+    actions: ["\u68B3\u7406\u5DDE\u53BF\u6587\u79FB\uFF0C\u5217\u660E\u627F\u529E\u5B98\u3002", "\u62BD\u9A8C\u4E09\u8DEF\u5949\u884C\u5B9E\u51B5\uFF0C\u6708\u5185\u590D\u594F\u3002", "\u5BF9\u7167\u8BCF\u4EE4\u4E0E\u6848\u724D\uFF0C\u67E5\u51FA\u64C5\u6539\u6761\u76EE\u3002", "\u8FFD\u7A76\u79EF\u538B\u516C\u6587\uFF0C\u8D23\u76D1\u53F8\u5B9A\u671F\u9500\u6848\u3002", "\u6309\u6267\u884C\u504F\u5DEE\u5206\u8D23\uFF0C\u4E0D\u4F5C\u6CDB\u5BDF\u3002", "\u590D\u6838\u5DF2\u52BE\u5B98\u540F\u8BC1\u636E\uFF0C\u4F9D\u6CD5\u7ED3\u6848\u3002", "\u6E05\u7406\u5DDE\u53BF\u672A\u7ED3\u4E8B\u9879\uFF0C\u9010\u4EF6\u56DE\u594F\u3002", "\u6C47\u603B\u5949\u884C\u6210\u6548\uFF0C\u5904\u5206\u5931\u804C\u5B98\u540F\u3002"]
+  }
 ];
+var pausedReasons = {
+  \u8D22\u653F: ["\u56FD\u5E93\u5C1A\u53EF\u652F\u5E94\uFF0C\u672C\u671F\u6025\u52A1\u5728\u522B\u5904\u3002", "\u8D22\u8BA1\u6CE2\u52A8\u6709\u9650\uFF0C\u672C\u671F\u4E3B\u8F85\u53E6\u6709\u77ED\u677F\u3002", "\u4E3B\u8F85\u6210\u672C\u5DF2\u5B9A\uFF0C\u672C\u671F\u8D22\u529B\u4E0D\u5B9C\u5206\u6563\u3002", "\u56FD\u5E93\u5C1A\u987B\u7559\u5907\uFF0C\u672C\u671F\u4E0D\u5B9C\u53E6\u5F00\u8D22\u52A1\u3002", "\u73B0\u6709\u5C81\u5165\u53EF\u627F\uFF0C\u672C\u671F\u8D22\u653F\u5E76\u975E\u6025\u9879\u3002", "\u672C\u671F\u4E3B\u52A1\u8017\u8D44\u8F83\u591A\uFF0C\u8D22\u8BA1\u4F59\u5730\u6709\u9650\u3002", "\u5386\u5E74\u8D22\u8BA1\u8D8B\u7A33\uFF0C\u672C\u671F\u66F4\u6025\u8005\u5728\u4ED6\u9879\u3002", "\u7EC8\u5C40\u8D22\u529B\u5C1A\u8DB3\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5360\u4F59\u91CF\u3002"],
+  \u6C11\u751F: ["\u6C11\u6237\u8D1F\u62C5\u5C1A\u7A33\uFF0C\u672C\u671F\u6025\u52A1\u4E0D\u5728\u6C11\u751F\u3002", "\u524D\u4EE4\u6210\u6548\u672A\u5B9A\uFF0C\u672C\u671F\u4E0D\u5B9C\u518D\u6270\u6C11\u6237\u3002", "\u5DDE\u53BF\u627F\u8F7D\u5DF2\u7D27\uFF0C\u672C\u671F\u6C11\u52A1\u4E0D\u5B9C\u5E76\u4E3E\u3002", "\u6C11\u751F\u6CE2\u52A8\u6709\u9650\uFF0C\u672C\u671F\u5C1A\u975E\u6700\u6025\u77ED\u677F\u3002", "\u5F53\u524D\u5B9E\u8D1F\u672A\u6076\u5316\uFF0C\u672C\u671F\u53EF\u8BA9\u4F4D\u4E3B\u52A1\u3002", "\u4E3B\u8F85\u5DF2\u6709\u66F4\u6025\u65B9\u5411\uFF0C\u672C\u671F\u6C11\u52A1\u5B9C\u7F13\u3002", "\u65E2\u6709\u51CF\u8D1F\u5C1A\u5728\u663E\u6548\uFF0C\u672C\u671F\u65E0\u9700\u53E0\u52A0\u3002", "\u7EC8\u5C40\u6C11\u60C5\u53EF\u6301\uFF0C\u672C\u671F\u4F59\u91CF\u5B9C\u987E\u4ED6\u9879\u3002"],
+  \u519B\u4E8B: ["\u8FB9\u8B66\u672A\u81F3\u6025\u8FEB\uFF0C\u672C\u671F\u8D22\u529B\u5B9C\u987E\u4E3B\u52A1\u3002", "\u519B\u50A8\u5C1A\u53EF\u652F\u5E94\uFF0C\u672C\u671F\u8FB9\u52A1\u5E76\u975E\u77ED\u677F\u3002", "\u8FB9\u60C5\u672A\u89C1\u9AA4\u53D8\uFF0C\u672C\u671F\u65E0\u9700\u5360\u7528\u4F59\u91CF\u3002", "\u73B0\u6709\u5BE8\u5821\u53EF\u5B88\uFF0C\u672C\u671F\u6025\u52A1\u53E6\u6709\u6240\u5C5E\u3002", "\u519B\u9700\u538B\u529B\u53EF\u63A7\uFF0C\u672C\u671F\u4E3B\u8F85\u4E0D\u5728\u8FB9\u5907\u3002", "\u672C\u671F\u5185\u653F\u66F4\u6025\uFF0C\u8FB9\u52A1\u6682\u65E0\u8FEB\u5207\u4E4B\u52BF\u3002", "\u8FB9\u5907\u5DF2\u7A0D\u7A33\uFF0C\u672C\u671F\u4E0D\u5B9C\u5206\u6563\u56FD\u529B\u3002", "\u7EC8\u5C40\u8FB9\u60C5\u53EF\u6301\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5217\u5B9E\u52A1\u3002"],
+  \u540F\u6CBB: ["\u5730\u65B9\u627F\u8F7D\u5C1A\u53EF\uFF0C\u672C\u671F\u4E0D\u5B9C\u53E0\u52A0\u4E8B\u52A1\u3002", "\u6709\u53F8\u4F59\u529B\u5DF2\u7D27\uFF0C\u672C\u671F\u5E94\u7559\u4E3B\u52A1\u3002", "\u524D\u4EE4\u5C1A\u5728\u6D88\u5316\uFF0C\u672C\u671F\u540F\u6CBB\u5E76\u975E\u9996\u6025\u3002", "\u5730\u65B9\u672A\u89C1\u65B0\u58C5\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5360\u4F59\u91CF\u3002", "\u73B0\u6709\u627F\u529E\u5C1A\u7A33\uFF0C\u672C\u671F\u6025\u52A1\u5728\u522B\u9879\u3002", "\u5DDE\u53BF\u538B\u529B\u53EF\u63A7\uFF0C\u672C\u671F\u4E0D\u5B9C\u518D\u6DFB\u4E8B\u52A1\u3002", "\u6267\u884C\u5DF2\u89C1\u6539\u5584\uFF0C\u672C\u671F\u53EF\u8BA9\u4F4D\u66F4\u5F31\u56FD\u52BF\u3002", "\u7EC8\u5C40\u627F\u8F7D\u5C1A\u8DB3\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5217\u540F\u52A1\u3002"]
+};
 function conciseSentence(value, fallback, maxLength = 24) {
   const cleaned = localizeInternalTerms(value).replace(/[\r\n|]+/g, "\uFF0C").replace(/【(?:主|辅|暂缓)】/g, "").replace(/^(?:财政|民生|军事|吏治)[：:]?/, "").replace(/(?:宜稳妥推进|酌情办理|视情况而定|统筹兼顾)/g, "").trim() || fallback;
   const firstSentence = cleaned.split(/(?<=[。！？])/u)[0] || cleaned;
   const clipped = firstSentence.length > maxLength ? `${firstSentence.slice(0, maxLength - 1).replace(/[，、；：]$/, "")}\u3002` : firstSentence;
   return /[。！？]$/.test(clipped) ? clipped : `${clipped}\u3002`;
 }
-function normalizeAdvisorOutline(parsed, current, capacity) {
+function stageForTurn(turn, maxTurns) {
+  const ratio = turn / Math.max(1, maxTurns);
+  return ratio <= 0.3 ? "\u524D\u671F" : ratio <= 0.7 ? "\u4E2D\u671F" : "\u540E\u671F";
+}
+function pausedSentence(value, definition, turn, indicators = {}) {
+  void value;
+  void indicators;
+  const choices = pausedReasons[definition.name];
+  return choices[(turn - 1) % choices.length];
+}
+function normalizeAdvisorOutline(parsed, current, capacity, state = {}) {
   const source = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
   const byName = new Map(source.map((item) => [localizeInternalTerms(item?.name), item]));
   let mainName = advisorDimensions.find(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "") === "\u4E3B")?.name;
   if (!mainName) mainName = advisorDimensions[0].name;
   let supportName = advisorDimensions.find(({ name }) => name !== mainName && localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "") === "\u8F85")?.name;
   if (!supportName) supportName = advisorDimensions.find(({ name }) => name !== mainName)?.name;
+  const turn = Math.max(1, Math.min(8, Math.round(Number(state?.turn) || 1)));
+  const previousPolicyIds = new Set((state?.history || []).flatMap((record) => record?.policyIds || []));
+  const previousAdvice = (state?.advisorHistory || []).join("\n");
   const dimensions = advisorDimensions.map((definition) => {
     const item = byName.get(definition.name) || {};
     const role = definition.name === mainName ? "\u4E3B" : definition.name === supportName ? "\u8F85" : "\u6682\u7F13";
     const requestedPolicyId = String(item?.policyId || "");
     const policyId = definition.allowed.includes(requestedPolicyId) ? requestedPolicyId : definition.policyId;
+    const fallback = definition.actions[turn - 1] || definition.actions.at(-1);
+    let advice = role === "\u6682\u7F13" ? pausedSentence(item?.advice, definition, turn, state?.indicators) : conciseSentence(item?.advice, fallback);
+    const repeatedSuggestion = role !== "\u6682\u7F13" && previousAdvice.includes(advice.replace(/[。！？]$/, ""));
+    if (role !== "\u6682\u7F13" && (previousPolicyIds.has(policyId) || repeatedSuggestion)) {
+      advice = conciseSentence(previousPolicyIds.has(policyId) ? `\u7EED\u529E\uFF0C${fallback}` : fallback, fallback);
+    }
     return {
       name: definition.name,
       scope: definition.scope,
       role,
-      advice: conciseSentence(item?.advice, definition.fallback),
+      advice,
       policyId
     };
   });
@@ -152,6 +211,19 @@ function normalizeAdvisorOutline(parsed, current, capacity) {
 var outputLanguageRule = `\u8F93\u5165\u4E2D\u7684\u82F1\u6587\u952E\u540D\u548C\u8FDE\u5B57\u7B26ID\u90FD\u662F\u7A0B\u5E8F\u5185\u90E8\u6807\u8BC6\uFF0C\u53EA\u4F9B\u4F60\u7406\u89E3\uFF0C\u7EDD\u4E0D\u80FD\u539F\u6837\u5199\u8FDB\u9762\u5411\u73A9\u5BB6\u7684\u6587\u5B57\u3002
 \u5FC5\u987B\u4F7F\u7528\u4E2D\u6587\u79F0\u547C\uFF1Atreasury=\u56FD\u5E93\uFF0CpoliticalCapital=\u653F\u7565\uFF0Cadministration=\u884C\u653F\uFF0Cfinance=\u8D22\u7528\uFF0Clivelihood=\u6C11\u751F\uFF0Cdefense=\u8FB9\u5907\uFF0CcourtSupport=\u58EB\u8BBA\uFF0Cexecution=\u6267\u884C\uFF0Cseverity=\u4E25\u91CD\u5EA6\u3002\u4E0D\u8981\u8F93\u51FA\u7C7B\u4F3C courtSupport-3\u3001severity66\u3001executionBonus+2 \u7684\u8C03\u8BD5\u5F0F\u8868\u8FBE\u3002`;
 async function interpretEdictWithAI({ edict, context = {}, config = {}, fetchImpl = fetch } = {}) {
+  const sourceEdict = String(edict || "").trim();
+  if (looksLikeAdvisorOutline(sourceEdict)) {
+    return {
+      ok: true,
+      interpretation: {
+        sourceText: sourceEdict,
+        policyIds: [],
+        officerId: null,
+        summary: "",
+        warnings: ["\u8F85\u653F\u5B98\u63D0\u7EB2\u4E0D\u80FD\u76F4\u63A5\u4F5C\u4E3A\u8BCF\u4E66\uFF1B\u8BF7\u636E\u4E3B\u8F85\u53D6\u820D\u4EB2\u81EA\u5199\u660E\u5BF9\u8C61\u3001\u63AA\u65BD\u4E0E\u671F\u9650\u3002"]
+      }
+    };
+  }
   const prompt = `\u4F60\u662F\u5317\u5B8B\u7199\u5B81\u53D8\u6CD5\u7B56\u7565\u6E38\u620F\u7684\u4E2D\u4E66\u820D\u4EBA\u3002\u5C06\u73A9\u5BB6\u81EA\u7531\u8BCF\u4E66\u6620\u5C04\u4E3A\u5168\u90E8\u76F8\u5173\u7684\u6E38\u620F\u89C4\u5219\u653F\u52A1\uFF0C\u4E0D\u8BBE\u7F6E\u4EBA\u4E3A\u6570\u91CF\u4E0A\u9650\uFF1B\u4E00\u4EFD\u8BCF\u4E66\u53EF\u4EE5\u540C\u65F6\u6D89\u53CA\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u4EFB\u514D\u3001\u5236\u5EA6\u548C\u5730\u65B9\u6CBB\u7406\u3002\u4E0D\u5F97\u521B\u9020ID\uFF0C\u4E0D\u5F97\u4FEE\u6539\u6570\u503C\uFF0C\u6267\u884C\u80FD\u529B\u4E0D\u8DB3\u7531\u7A0B\u5E8F\u7ED3\u7B97\u4E3A\u884C\u653F\u8D85\u8F7D\u3002
 
 \u5141\u8BB8\u7684\u653F\u52A1\uFF1A
@@ -192,16 +264,31 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
     administration: policy?.cost?.administration ?? 0,
     treasury: policy?.cost?.treasury ?? 0
   }));
+  const currentTurn = Math.max(1, Number(state?.turn || 1));
+  const maxTurns = Math.max(currentTurn, Number(state?.maxTurns || 8));
+  const remainingTurns = Math.max(0, maxTurns - currentTurn + 1);
+  const stage = stageForTurn(currentTurn, maxTurns);
+  const completedObjectives = (state?.objectives || []).filter((item) => item?.completed).map((item) => item.title);
+  const activeItems = (state?.activePolicies || []).map((item) => ({
+    \u653F\u52A1: allowedPolicies.find(([id]) => id === item?.policyId)?.[1] || item?.policyId,
+    \u627F\u529E: allowedOfficers.find(([id]) => id === item?.officerId)?.[1] || item?.officerId,
+    \u5C1A\u4F59\u56DE\u5408: item?.remainingTurns
+  }));
   const prompt = `\u4F60\u5728\u5B8B\u795E\u5B97\u7199\u5B81\u671D\u62C5\u4EFB\u5FA1\u524D\u8F85\u653F\u5B98\u3002\u73A9\u5BB6\u5C1A\u672A\u9881\u8BCF\uFF0C\u4F60\u53EA\u8D1F\u8D23\u63D0\u4F9B\u5206\u7EF4\u5EA6\u65BD\u653F\u63D0\u7EB2\uFF0C\u7EDD\u4E0D\u80FD\u4EE3\u5199\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E5F\u4E0D\u80FD\u66FF\u73A9\u5BB6\u4F5C\u6700\u7EC8\u51B3\u5B9A\u3002
 
 \u5F53\u524D\u65F6\u95F4\uFF1A${formatDate(state?.date)}
-\u5F53\u524D\u6025\u52A1\uFF1A${JSON.stringify(event)}
-\u5F53\u524D\u56FD\u52BF\uFF1A${JSON.stringify({ indicators: state?.indicators, resources: state?.resources, dilemmas: state?.dilemmas, polity: state?.polity })}
-\u5F53\u524D\u56FD\u7B56\u6210\u679C\uFF1A${JSON.stringify(state?.objectives || [])}
-\u5269\u4F59\u56DE\u5408\uFF1A${Math.max(0, Number(state?.maxTurns || 8) - Number(state?.turn || 1) + 1)}
+\u5F53\u524D\u56DE\u5408\uFF1A\u7B2C${currentTurn}/${maxTurns}\u56DE\uFF1B\u8DDD\u7EC8\u5C40\u5C1A\u4F59${remainingTurns}\u56DE\uFF1B\u9636\u6BB5\uFF1A${stage}
+\u4E94\u9879\u56FD\u52BF\uFF1A\u8D22\u7528${state?.indicators?.finance ?? "\u672A\u77E5"}\uFF0C\u6C11\u751F${state?.indicators?.livelihood ?? "\u672A\u77E5"}\uFF0C\u8FB9\u5907${state?.indicators?.defense ?? "\u672A\u77E5"}\uFF0C\u58EB\u8BBA${state?.indicators?.courtSupport ?? "\u672A\u77E5"}\uFF0C\u6267\u884C${state?.indicators?.execution ?? "\u672A\u77E5"}
+\u5F53\u524D\u4F59\u91CF\uFF1A\u884C\u653F${administrativeRemaining}/${administrativeCapacity}\uFF0C\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\uFF0C\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F
+\u5F53\u524D\u56FD\u7B56\u6210\u679C\uFF08\u5DF2\u5B8C\u6210\uFF09\uFF1A${completedObjectives.length ? completedObjectives.join("\u3001") : "\u6682\u65E0"}
+\u8FDB\u884C\u4E2D\u4E8B\u9879\uFF1A${activeItems.length ? JSON.stringify(activeItems) : "\u6682\u65E0"}
+\u672C\u56DE\u5408\u56F0\u5883\u4E8B\u4EF6\uFF1A${event?.title || "\u672A\u8F7D"}\u2014\u2014${event?.description || "\u672A\u8F7D"}\uFF1B\u5373\u65F6\u5F71\u54CD${JSON.stringify(event?.effects || {})}
+\u5F53\u524D\u5176\u4ED6\u56F0\u5883\uFF1A${JSON.stringify(state?.dilemmas || [])}
 \u5F53\u524D\u51C6\u5907\u4EFB\u7528\u7684\u6267\u884C\u5B98\uFF1A${JSON.stringify(officer)}
 \u53EF\u6267\u884C\u653F\u52A1\u53CA\u5176\u672C\u56DE\u5408\u6210\u672C\uFF1A${JSON.stringify(policyBudget)}
-\u6B64\u524D\u653F\u4EE4\uFF1A${formatHistory(state?.history || [])}
+\u6B64\u524D\u5404\u56DE\u8BCF\u4EE4\u4E0E\u7ED3\u7B97\uFF08\u4E0D\u5F97\u5FFD\u7565\uFF09\uFF1A
+${formatHistory(state?.history || [])}
+\u6B64\u524D\u8F85\u653F\u5B98\u5DF2\u63D0\u65B9\u5411\uFF08\u4E0D\u5F97\u539F\u53E5\u91CD\u63D0\uFF09\uFF1A${(state?.advisorHistory || []).slice(-6).join("\n") || "\u65E0\u3002"}
 \u73A9\u5BB6\u6848\u524D\u5DF2\u6709\u6587\u5B57\uFF1A${String(currentEdict || "").trim() || "\u5C1A\u672A\u843D\u7B14"}
 \u73A9\u5BB6\u5411\u8F85\u653F\u5B98\u8BE2\u95EE\uFF1A${String(question || "").trim() || "\u8BF7\u5206\u6790\u5F53\u524D\u683C\u5C40\u5E76\u63D0\u51FA\u51E0\u6761\u53EF\u884C\u8DEF\u7EBF"}
 
@@ -216,6 +303,8 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
 \u4EBA\u4E8B:\u4E00\u53E5\u8BDD\u4EBA\u4E8B\u5EFA\u8BAE
 
 \u56DB\u4E2A\u7EF4\u5EA6\u5FC5\u987B\u5168\u90E8\u5217\u51FA\uFF0C\u987A\u5E8F\u56FA\u5B9A\u4E3A\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u3002\u3010\u4E3B\u3011\u548C\u3010\u8F85\u3011\u5404\u4E14\u4EC5\u51FA\u73B0\u4E00\u6B21\uFF0C\u5176\u4F59\u4E24\u9879\u5FC5\u987B\u6807\u3010\u6682\u7F13\u3011\u3002\u6BCF\u4E2A\u7EF4\u5EA6\u6700\u591A\u4E00\u6761\u5EFA\u8BAE\uFF0C\u4E25\u7981\u9762\u9762\u4FF1\u5230\u3002\u5EFA\u8BAE\u5FC5\u987B\u5177\u4F53\u5230\u52A8\u4F5C\u3001\u5BF9\u8C61\u6216\u671F\u9650\uFF0C\u4F8B\u5982\u201C\u6838\u5BF9\u4E09\u53F8\u8D26\u7C3F\uFF0C\u9650\u671F\u4E00\u6708\u201D\uFF0C\u4E0D\u5F97\u5199\u201C\u5B9C\u7A33\u59A5\u63A8\u8FDB\u201D\u201C\u914C\u60C5\u529E\u7406\u201D\u201C\u89C6\u60C5\u51B5\u800C\u5B9A\u201D\u7B49\u7A7A\u8BDD\u3002\u4EBA\u4E8B\u5EFA\u8BAE\u5355\u72EC\u4E00\u884C\uFF0C\u4E0D\u5360\u7EF4\u5EA6\u540D\u989D\uFF1B\u65E0\u987B\u8C03\u6574\u4EBA\u4E8B\u65F6\u5199\u201C\u6682\u65E0\u8C03\u4EFB\u5EFA\u8BAE\u201D\u3002\u663E\u793A\u6587\u672C\u603B\u957F\u5EA6\u4E0D\u5F97\u8D85\u8FC7\u4E8C\u767E\u5B57\u3002\u4FDD\u7559\u514B\u5236\u7684\u6587\u8A00\u8BED\u611F\uFF0C\u4F46\u63D0\u7EB2\u4EE5\u7B80\u6D01\u4E3A\u5148\uFF0C\u4E0D\u5199\u9A88\u53E5\u3002
+
+\u4E0D\u5F97\u91CD\u590D\u6B64\u524D\u56DE\u5408\u5DF2\u7ECF\u63D0\u51FA\u6216\u9881\u884C\u7684\u5EFA\u8BAE\u65B9\u5411\u3002\u82E5\u540C\u4E00\u4E8B\u52A1\u786E\u987B\u5EF6\u7EED\uFF0C\u5FC5\u987B\u4EE5\u201C\u7EED\u529E\u201D\u5F00\u5934\uFF0C\u5E76\u660E\u786E\u672C\u671F\u65B0\u589E\u7740\u529B\u70B9\uFF0C\u4E0D\u5F97\u539F\u53E5\u91CD\u8FF0\u3002\u5EFA\u8BAE\u5FC5\u987B\u9488\u5BF9\u672C\u671F\u6570\u503C\u77ED\u677F\u4E0E\u56F0\u5883\uFF1B\u58EB\u8BBA\u504F\u4F4E\u65F6\u987B\u8003\u8651\u7F13\u548C\u671D\u8BAE\u6216\u6536\u7A84\u63A8\u884C\u529B\u5EA6\u3002${stage === "\u524D\u671F" ? "\u5F53\u524D\u4E3A\u524D\u671F\uFF0C\u91CD\u5728\u6838\u6E05\u5E95\u6570\u4E0E\u5C0F\u8303\u56F4\u8BD5\u529E\u3002" : stage === "\u4E2D\u671F" ? "\u5F53\u524D\u4E3A\u4E2D\u671F\uFF0C\u91CD\u5728\u63A8\u884C\u3001\u6838\u9A8C\u4E0E\u7EA0\u504F\u3002" : "\u5F53\u524D\u4E3A\u540E\u671F\uFF0C\u91CD\u5728\u5DE9\u56FA\u6210\u679C\u3001\u7ED3\u6E05\u9057\u7559\u4E0E\u5584\u540E\u3002"}\u3010\u6682\u7F13\u3011\u9879\u53EA\u51C6\u8BF4\u660E\u201C\u4E3A\u4F55\u672C\u671F\u4E0D\u505A\u201D\uFF0C\u4E25\u7981\u5199\u4EFB\u4F55\u52A8\u4F5C\u3001\u5BF9\u8C61\u6216\u671F\u9650\u3002
 
 \u4F60\u987B\u5728\u5185\u90E8\u6838\u7B97\u653F\u7565\u3001\u884C\u653F\u4E0E\u56FD\u5E93\u6210\u672C\uFF1A\u603B\u653F\u7565\u6210\u672C\u8FD8\u8981\u52A0\u4E0A\u6267\u884C\u5B98\u4E00\u6B21\u6027\u7684\u653F\u7565\u6D88\u8017\u4FEE\u6B63\uFF1B\u7ED3\u7B97\u540E\u987B\u81F3\u5C11\u4FDD\u7559 12 \u70B9\u653F\u7565\u300110 \u70B9\u884C\u653F\u548C 800 \u4E07\u8D2F\u56FD\u5E93\u3002\u8D44\u6E90\u4E0D\u8DB3\u65F6\uFF0C\u5C06\u9AD8\u6210\u672C\u65B9\u5411\u5217\u4E3A\u3010\u6682\u7F13\u3011\uFF0C\u4E0D\u5F97\u5806\u53E0\u653F\u52A1\u4F2A\u88C5\u5468\u5168\u3002\u53EA\u63D0\u51FA\u811A\u624B\u67B6\uFF0C\u4E0D\u5F97\u8F93\u51FA\u8BCF\u4E66\u6B63\u6587\u3001\u5236\u66F0\u3001\u5949\u8BCF\u3001\u94A6\u6B64\u7B49\u6210\u7A3F\u63AA\u8F9E\u3002
 
@@ -244,7 +333,7 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
   const parsed = parseJsonOutput(output);
   return {
     ok: true,
-    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity)
+    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity, state)
   };
 }
 async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, event, officer, policies, record, history = [], config = {}, fetchImpl = fetch } = {}) {
@@ -414,7 +503,12 @@ function formatDate(date) {
 }
 function formatHistory(history) {
   if (!Array.isArray(history) || !history.length) return "\u65E0\u3002";
-  return history.slice(-6).map((turn) => `\u7B2C${turn.turn}\u56DE\uFF1A\u8BCF\u4E66\u201C${turn.edictText || "\u672A\u5F55\u539F\u6587"}\u201D\uFF1B\u65E2\u6709\u7ED3\u679C\u201C${turn.aiSummary || turn.eventTitle || "\u672A\u5F55"}\u201D`).join("\n");
+  return history.slice(-6).map((turn) => {
+    const policies = (turn.policyIds || []).map((id) => allowedPolicies.find(([allowed]) => allowed === id)?.[1] || id).join("\u3001") || "\u672A\u8BC6\u522B";
+    const indicatorChanges = localizeInternalTerms(JSON.stringify(turn.indicatorChanges || {}));
+    const resourceChanges = localizeInternalTerms(JSON.stringify(turn.resourceChanges || {}));
+    return `\u7B2C${turn.turn}\u56DE\uFF1A\u6838\u5FC3\u8BCF\u4EE4\u201C${turn.edictText || "\u672A\u5F55\u539F\u6587"}\u201D\uFF1B\u65BD\u884C\u653F\u52A1\u201C${policies}\u201D\uFF1B\u56FD\u52BF\u53D8\u5316${indicatorChanges}\uFF1B\u4F59\u91CF\u53D8\u5316${resourceChanges}\uFF1B\u884C\u653F\u8D85\u8F7D${turn.administrativeOverload || 0}\u3001\u653F\u7565\u900F\u652F${turn.politicalOverdraft || 0}\uFF1B\u7ED3\u7B97\u201C${turn.aiSummary || turn.eventTitle || "\u672A\u5F55"}\u201D`;
+  }).join("\n");
 }
 function parsePairs(value, labelKey) {
   return Array.isArray(value) ? value.map((item) => ({ stage: localizeInternalTerms(item?.[labelKey]), text: localizeInternalTerms(item?.text) })).filter((item) => item.stage && item.text).slice(0, 6) : [];

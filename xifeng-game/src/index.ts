@@ -4,7 +4,7 @@ export { appointCourtOfficer, dismissCourtOfficer, isCourtOfficerAppointed } fro
 export { policies } from './data/policies';
 export { officers, officerGroups, officerTagLabels } from './data/officers';
 export { historicalEvents } from './data/events';
-export { parseEdict } from './ai/edict-parser';
+export { isAdvisorOutline, parseEdict } from './ai/edict-parser';
 export type { EdictInterpretation } from './ai/edict-parser';
 export type { AdvisorAdvice, AIConfig, HistoricalNarrative } from './ai/client';
 export type * from './game/types';
