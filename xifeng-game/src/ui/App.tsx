@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArchiveRestore, BookOpenText, CircleDollarSign, Landmark, LibraryBig, LoaderCircle, RotateCcw, Save, Scale, ScrollText, Search, Shield, Trash2, Users, X } from 'lucide-react';
 import { appointCourtOfficer, createInitialState, describeCourtCandidateFit, dismissCourtOfficer, historicalEvents, isCourtOfficerAppointed, officers, officerTagLabels, parseEdict, policies, settleTurn } from '..';
 import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, providerDefaults, testAIConnectionRemote } from '../ai/client';
@@ -35,6 +35,12 @@ const formatGameDate = (date: GameState['date']) => `熙宁${numerals[date.reign
 const formatDate = (state: GameState) => formatGameDate(state.date);
 const effectText = (changes: Partial<Record<IndicatorKey, number>>) => Object.entries(changes).map(([key, value]) => `${indicatorMeta[key as IndicatorKey].label} ${Number(value) > 0 ? '+' : ''}${value}`);
 const emptyAIConfig: AIConfig = { provider: 'deepseek', apiKey: '', ...providerDefaults.deepseek };
+const bgmMutedKey = 'xifeng-bgm-muted';
+
+function readBgmMuted(): boolean {
+  try { return localStorage.getItem(bgmMutedKey) === 'true'; }
+  catch { return false; }
+}
 
 function readAIConfig(key: string): AIConfig {
   try {
@@ -63,9 +69,44 @@ export function App() {
   const [error, setError] = useState('');
   const [inferenceConfig, setInferenceConfig] = useState(() => readAIConfig('xifeng-ai-config'));
   const [aiBusy, setAIBusy] = useState('');
+  const [bgmMuted, setBgmMuted] = useState(readBgmMuted);
+  const bgmRef = useRef<HTMLAudioElement>(null);
   const advisorConfig: AIConfig = { ...inferenceConfig };
   const event = historicalEvents.find((item) => item.turn === state.turn) ?? historicalEvents.at(-1)!;
   const officer = officers.find((item) => item.id === officerId) ?? officers[0]!;
+
+  useEffect(() => {
+    const audio = bgmRef.current;
+    if (!audio) return;
+    audio.volume = .32;
+    audio.muted = bgmMuted;
+  }, [bgmMuted]);
+
+  useEffect(() => {
+    const startMusic = () => {
+      if (!bgmMuted) void bgmRef.current?.play().catch(() => undefined);
+      window.removeEventListener('pointerdown', startMusic);
+      window.removeEventListener('keydown', startMusic);
+    };
+    window.addEventListener('pointerdown', startMusic, { once: true });
+    window.addEventListener('keydown', startMusic, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', startMusic);
+      window.removeEventListener('keydown', startMusic);
+    };
+  }, [bgmMuted]);
+
+  function toggleBgm() {
+    setBgmMuted((current) => {
+      const next = !current;
+      try { localStorage.setItem(bgmMutedKey, String(next)); } catch { /* 浏览器禁用存储时只保留本次设置。 */ }
+      if (bgmRef.current) {
+        bgmRef.current.muted = next;
+        if (!next) void bgmRef.current.play().catch(() => undefined);
+      }
+      return next;
+    });
+  }
 
   function showDilemmas(baseline: DilemmaProgress[] | null = null) {
     setDilemmaBaseline(baseline);
@@ -150,6 +191,7 @@ export function App() {
   }
 
   return <main className="game-root">
+    <audio ref={bgmRef} src={assetUrl('assets/audio/jin-shu-nan-tuo.mp3')} loop preload="auto" />
     <GameScreen
       state={state}
       selectedCrisisId={focusedDilemmaId}
@@ -160,6 +202,8 @@ export function App() {
       onOpenArchive={() => { setArchiveReturnsToEdict(false); setPanel('archive'); }}
       onOpenRecords={() => setPanel('records')}
       onOpenSaves={() => setPanel('saves')}
+      musicMuted={bgmMuted}
+      onToggleMusic={toggleBgm}
     />
 
     {panel && <Drawer title={panelTitles[panel]} kind={panel} variant="workspace" onClose={() => { if (panel === 'dilemmas') setDilemmaBaseline(null); if (panel === 'archive' && archiveReturnsToEdict) { setArchiveReturnsToEdict(false); setPanel('edict'); } else setPanel(null); }}>

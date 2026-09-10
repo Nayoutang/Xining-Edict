@@ -88,6 +88,11 @@
 .historian-settings img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .historian-settings:hover { filter: brightness(1.12) drop-shadow(0 7px 6px #120b0685); transform: translateY(-2px); }
 .historian-settings:focus-visible { outline: 2px solid #c4a66f; outline-offset: 3px; }
+.music-toggle { position: absolute; right: 8%; bottom: -13%; display: grid; width: clamp(30px,2.45vw,50px); aspect-ratio: 1; place-items: center; border: 1px solid #9e7b48; border-radius: 50%; background: radial-gradient(circle at 38% 32%,#7b5a31,#352518 68%); color: #e4c985; padding: 22%; cursor: pointer; box-shadow: inset 0 0 0 2px #21150d80,0 4px 7px #120b0675; }
+.music-toggle svg { width: 100%; height: 100%; }
+.music-toggle.is-muted { color: #aa9570; filter: saturate(.65); }
+.music-toggle:hover { filter: brightness(1.13); transform: translateY(-2px); }
+.music-toggle:focus-visible { outline: 2px solid #c4a66f; outline-offset: 3px; }
 .turn-layer {
   left: 18.5%;
   top: 3.2%;

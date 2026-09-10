@@ -17,6 +17,8 @@ function renderGameScreen(state: GameState) {
     onOpenArchive={noop}
     onOpenRecords={noop}
     onOpenSaves={noop}
+    musicMuted={false}
+    onToggleMusic={noop}
   />);
 }
 
@@ -31,6 +33,7 @@ describe('GameScreen dynamic DOM', () => {
     expect(initial).toContain('所在的困境总览');
     expect(initial).not.toContain('详细奏札');
     expect(initial).toContain('铨选');
+    expect(initial).toContain('静音背景音乐');
     expect(initial).not.toContain('法度');
     expect(initial).not.toContain('selected-officer');
 
