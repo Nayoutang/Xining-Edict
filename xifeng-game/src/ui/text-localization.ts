@@ -71,16 +71,14 @@ export function addPlainReactionLead(labelValue: unknown, textValue: unknown): s
 
 export function localizeAdvisorAdvice(advice: AdvisorAdvice): AdvisorAdvice {
   return {
-    situation: localizeDisplayText(advice.situation),
-    priorities: advice.priorities.map(localizeDisplayText),
-    options: advice.options.map((item) => ({
-      title: localizeDisplayText(item.title),
-      benefit: localizeDisplayText(item.benefit),
-      risk: localizeDisplayText(item.risk),
+    outline: localizeDisplayText(advice.outline),
+    dimensions: advice.dimensions.map((item) => ({
+      ...item,
+      scope: localizeDisplayText(item.scope),
+      advice: localizeDisplayText(item.advice),
     })),
+    personnel: localizeDisplayText(advice.personnel),
     policyIds: advice.policyIds ?? [],
-    draftEdict: localizeDisplayText(advice.draftEdict),
-    cautions: advice.cautions.map(localizeDisplayText),
   };
 }
 

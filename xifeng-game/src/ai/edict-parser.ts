@@ -13,7 +13,7 @@ const policyPatterns: Array<{ policyId: string; patterns: RegExp[] }> = [
   { policyId: 'green-sprouts-trial', patterns: [/青苗/, /常平仓/, /青黄不接/, /贷.*农/] },
   { policyId: 'service-reform-preparation', patterns: [/募役/, /免役/, /差役/, /以钱代役/, /役钱/] },
   { policyId: 'water-conservancy', patterns: [/水利/, /河渠/, /陂塘/, /灌溉/, /修堤/] },
-  { policyId: 'curb-local-exactions', patterns: [/摊派/, /抑配/, /强征/, /胥吏/, /监司.*查/, /查禁/] },
+  { policyId: 'curb-local-exactions', patterns: [/摊派/, /抑配/, /强征/, /胥吏/, /监司.*查/, /查禁/, /整顿吏治/, /地方执行/, /州县.*执行/, /诏令.*(?:落到|落实).*州县/] },
   { policyId: 'reduce-redundant-spending', patterns: [/冗费/, /营造/, /宫观/, /裁减.*费/, /节用/, /虚冒/] },
   { policyId: 'northwest-defense', patterns: [/西北/, /陕西/, /边备/, /军粮/, /寨堡/, /西夏/] },
   { policyId: 'review-impeachments', patterns: [/弹章/, /弹劾/, /台谏.*复核/, /具名列证/, /查.*指控/] },

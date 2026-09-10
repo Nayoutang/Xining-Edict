@@ -52,17 +52,21 @@ describe('AI史实推理边界', () => {
     expect(result).not.toHaveProperty('treasuryDelta');
   });
 
-  it('辅政官只给局势、路线和可修改草诏，不替玩家颁行', async () => {
+  it('辅政官只给分维度提纲，不再代写诏书', async () => {
     const fetchImpl = vi.fn(async () => mockResponse({
-      situation: '财用与抑配相互牵连。', priorities: ['先查执行', '保留赈济'],
-      options: [{ title: '先察后改', benefit: '查清账目', risk: '见效较慢' }],
-      draftEdict: '诏遣使对勘青苗账簿，限一月复奏。', cautions: ['防止御史借案攻讦'],
+      dimensions: [
+        { name: '财政', role: '主', advice: '核对三司账簿，限一月具报', policyId: 'cross-check-ledgers' },
+        { name: '民生', role: '辅', advice: '核查民户实负，灾伤户缓征', policyId: 'curb-local-exactions' },
+        { name: '军事', role: '暂缓', advice: '军储底数未清，暂不增兵', policyId: 'northwest-defense' },
+        { name: '吏治', role: '暂缓', advice: '监司方在核验，候复奏再议', policyId: 'review-impeachments' },
+      ],
+      personnel: '命曾布专核三司账案',
     }));
-    const result = await adviseWithAI({ question: '该如何处置？', config, fetchImpl });
-    expect(result.advice.situation).toContain('财用');
-    expect(result.advice.options[0].risk).toContain('较慢');
-    expect(result.advice.draftEdict).toContain('复奏');
-    expect(result.advice.policyIds).toEqual(['open-ended-directive']);
+    const result = await adviseWithAI({ question: '该如何处置？', state: { resources: { administration: 32 } }, config, fetchImpl });
+    expect(result.advice.outline).toMatch(/^行政余量:32\/50\n\n财政\|\(国库与岁入\)【主】/);
+    expect(result.advice.outline).toContain('\n人事:命曾布专核三司账案。');
+    expect(result.advice.outline).not.toMatch(/制曰|奉诏|钦此|辅政草诏/);
+    expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
   it('辅政官收到政务成本并被要求保持一主一辅的可持续预算', async () => {
@@ -70,9 +74,12 @@ describe('AI史实推理边界', () => {
     const fetchImpl = vi.fn(async (_url, options) => {
       requestBody = JSON.parse(options.body);
       return mockResponse({
-        situation: '政略有限，应先核账。', priorities: ['先核账'],
-        options: [{ title: '先察后改', benefit: '控制成本', risk: '见效较慢' }],
-        policyIds: ['cross-check-ledgers'], draftEdict: '诏遣使对勘账簿，限期复奏。', cautions: ['保留政略'],
+        dimensions: [
+          { name: '财政', role: '主', advice: '核对三司账簿，限一月', policyId: 'cross-check-ledgers' },
+          { name: '民生', role: '辅', advice: '查核抑配，灾伤户缓征', policyId: 'curb-local-exactions' },
+          { name: '军事', role: '暂缓', advice: '财用未定，暂缓增兵', policyId: 'northwest-defense' },
+          { name: '吏治', role: '暂缓', advice: '先候账案复奏', policyId: 'review-impeachments' },
+        ], personnel: '',
       });
     });
     await adviseWithAI({
@@ -84,28 +91,29 @@ describe('AI史实推理边界', () => {
       fetchImpl,
     });
     const prompt = requestBody.messages.map((message) => message.content).join('\n');
-    expect(prompt).toContain('一项主政务与至多一项配套政务');
+    expect(prompt).toContain('四个维度必须全部列出，顺序固定为财政、民生、军事、吏治');
+    expect(prompt).toContain('【主】和【辅】各且仅出现一次');
+    expect(prompt).toContain('每个维度最多一条建议，严禁面面俱到');
     expect(prompt).toContain('至少保留 12 点政略、10 点行政和 800 万贯国库');
     expect(prompt).toContain('当前国策成果');
     expect(prompt).toContain('对勘官署账簿');
     expect(prompt).toContain('"politicalCapital":4');
-    expect(prompt).toContain('格局判断的第一句必须逐字采用“行政余量实有 30 点。”');
-    expect(prompt).toContain('只能明确主推一个方向');
-    expect(prompt).toContain('至少写入一项具体的开源措施');
+    expect(prompt).toContain('行政余量:30/50');
+    expect(prompt).toContain('不得输出诏书正文');
     expect((await adviseWithAI({
       state: { resources: { politicalCapital: 24, administration: 30, treasury: 4000 } },
       policies: [{ id: 'cross-check-ledgers', name: '对勘官署账簿', cost: {} }], config, fetchImpl,
-    })).advice.policyIds).toEqual(['cross-check-ledgers', 'open-ended-directive']);
+    })).advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
-  it('辅政官输出强制补足行政实数、单一主推方向与开源措施', async () => {
+  it('辅政官会修正重复主辅、乱序和空话，稳定输出固定提纲', async () => {
     const fetchImpl = vi.fn(async () => mockResponse({
-      situation: '财政、民生、边防都值得兼顾。',
-      priorities: ['先核账'],
-      options: [{ title: '先核账', benefit: '厘清财计', risk: '见效稍慢' }],
-      policyIds: ['cross-check-ledgers'],
-      draftEdict: '诏遣使对勘账簿，限期复奏。',
-      cautions: [],
+      dimensions: [
+        { name: '吏治', role: '主', advice: '宜稳妥推进', policyId: 'northwest-defense' },
+        { name: '军事', role: '主', advice: '核验陕西军粮，限十日', policyId: 'northwest-defense' },
+        { name: '财政', role: '辅', advice: '核对三司账簿，限一月', policyId: 'cross-check-ledgers' },
+      ],
+      personnel: '视情况而定',
     }));
     const result = await adviseWithAI({
       state: { resources: { politicalCapital: 24, administration: 27, treasury: 4000 } },
@@ -114,11 +122,46 @@ describe('AI史实推理边界', () => {
       fetchImpl,
     });
 
-    expect(result.advice.situation).toMatch(/^行政余量实有 27 点。主推方向：先核账。/);
-    expect(result.advice.situation).not.toContain('都值得兼顾');
-    expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'open-ended-directive']);
-    expect(result.advice.draftEdict).toContain('开源');
-    expect(result.advice.draftEdict).toContain('不得转嫁民户');
+    const lines = result.advice.outline.split('\n').filter(Boolean);
+    expect(lines.map((line) => line.split('|')[0])).toEqual(['行政余量:27/50', '财政', '民生', '军事', '吏治', '人事:暂无调任建议。']);
+    expect(result.advice.outline.match(/【主】/g)).toHaveLength(1);
+    expect(result.advice.outline.match(/【辅】/g)).toHaveLength(1);
+    expect(result.advice.outline.match(/【暂缓】/g)).toHaveLength(2);
+    expect(result.advice.outline).not.toMatch(/宜稳妥推进|视情况而定/);
+    expect(result.advice.outline.length).toBeLessThanOrEqual(200);
+  });
+
+  it('连续五次参详都保持四维、一主一辅与二百字上限', async () => {
+    let call = 0;
+    const roles = [
+      ['主', '辅', '暂缓', '暂缓'],
+      ['辅', '主', '暂缓', '暂缓'],
+      ['主', '主', '辅', '暂缓'],
+      ['暂缓', '辅', '主', '主'],
+      ['暂缓', '暂缓', '暂缓', '暂缓'],
+    ];
+    const fetchImpl = vi.fn(async () => {
+      const currentRoles = roles[call++];
+      return mockResponse({
+        dimensions: ['财政', '民生', '军事', '吏治'].map((name, index) => ({
+          name,
+          role: currentRoles[index],
+          advice: `${name}核验案牍，限一月复奏`,
+          policyId: ['cross-check-ledgers', 'curb-local-exactions', 'northwest-defense', 'review-impeachments'][index],
+        })),
+        personnel: '命现任承办官按月复奏',
+      });
+    });
+
+    for (let index = 0; index < 5; index += 1) {
+      const { advice } = await adviseWithAI({ state: { resources: { administration: 40 - index } }, config, fetchImpl });
+      expect(advice.dimensions.map((item) => item.name)).toEqual(['财政', '民生', '军事', '吏治']);
+      expect(advice.dimensions.filter((item) => item.role === '主')).toHaveLength(1);
+      expect(advice.dimensions.filter((item) => item.role === '辅')).toHaveLength(1);
+      expect(advice.dimensions.filter((item) => item.role === '暂缓')).toHaveLength(2);
+      expect(advice.outline).toContain(`行政余量:${40 - index}/50`);
+      expect(advice.outline.length).toBeLessThanOrEqual(200);
+    }
   });
 
   it('各方回奏的第一句使用白话概括', async () => {
@@ -139,19 +182,20 @@ describe('AI史实推理边界', () => {
 
   it('辅政官输出中的内部字段和ID统一转换为中文', async () => {
     const fetchImpl = vi.fn(async () => mockResponse({
-      situation: 'politicalCapital 12，courtSupport 44，forced-loans 的 severity66。',
-      priorities: ['提高execution', '控制administrativeOverload'],
-      options: [{ title: '核账', benefit: 'finance+2', risk: 'politicalCostModifier+3' }],
-      draftEdict: '命wang-anshi查cross-check-ledgers。',
-      cautions: ['executionBonus不足'],
+      dimensions: [
+        { name: '财政', role: '主', advice: '核对cross-check-ledgers，限一月', policyId: 'cross-check-ledgers' },
+        { name: '民生', role: '辅', advice: '核查forced-loans的severity66', policyId: 'curb-local-exactions' },
+        { name: '军事', role: '暂缓', advice: 'finance不足，暂缓增兵', policyId: 'northwest-defense' },
+        { name: '吏治', role: '暂缓', advice: 'execution不足，候复奏', policyId: 'review-impeachments' },
+      ],
+      personnel: '命wang-anshi领办',
     }));
     const result = await adviseWithAI({ question: '该如何处置？', config, fetchImpl });
-    const rendered = JSON.stringify(result.advice);
+    const rendered = `${result.advice.outline}${result.advice.personnel}`;
 
-    expect(rendered).toContain('政略 12');
-    expect(rendered).toContain('士论 44');
     expect(rendered).toContain('王安石');
-    expect(rendered).not.toMatch(/politicalCapital|courtSupport|forced-loans|severity|executionBonus|politicalCostModifier|cross-check-ledgers|wang-anshi/);
+    expect(rendered).toContain('青苗抑配');
+    expect(rendered).not.toMatch(/forced-loans|severity|execution|cross-check-ledgers|wang-anshi/);
   });
 
   it('千问连接测试使用兼容接口并返回就绪信息', async () => {

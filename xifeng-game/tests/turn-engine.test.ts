@@ -202,6 +202,20 @@ describe('半年回合结算', () => {
     expect(state.resources.politicalCapital).toBeGreaterThan(0);
   });
 
+  it('按财政主项与吏治辅项拟诏时只结算两项行政消耗', () => {
+    const state = createInitialState();
+    const result = settleTurn(state, {
+      policyIds: ['cross-check-ledgers', 'curb-local-exactions'],
+      officerId: 'wang-anshi',
+      edictNote: '核对三司账簿，限期一月；整顿吏治，逐级核验诏令能否落到州县。',
+    });
+
+    expect(result.record.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
+    expect(result.record.administrativeOverload).toBe(0);
+    expect(result.record.resourceChanges.administration).toBe(-4);
+    expect(result.state.resources.administration).toBe(36);
+  });
+
   it('整饬吏治政务无需硬前置即可直接执行', () => {
     const ledgerState = settleTurn(createInitialState(), {
       policyIds: ['cross-check-ledgers'], officerId: 'zeng-bu',

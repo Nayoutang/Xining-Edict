@@ -53,8 +53,6 @@ export function App() {
   const [state, setState] = useState(createInitialState);
   const [policyIds, setPolicyIds] = useState<string[]>([]);
   const [edictText, setEdictText] = useState('');
-  const [advisorPolicyIds, setAdvisorPolicyIds] = useState<string[] | null>(null);
-  const [advisorDraftActive, setAdvisorDraftActive] = useState(false);
   const [interpretation, setInterpretation] = useState<EdictInterpretation | null>(null);
   const [officerId, setOfficerId] = useState(officers[0]?.id ?? '');
   const [panel, setPanel] = useState<PanelName>(null);
@@ -76,16 +74,6 @@ export function App() {
 
   function updateEdict(text: string) {
     setEdictText(text);
-    setAdvisorPolicyIds(null);
-    setInterpretation(null);
-    setPolicyIds([]);
-    setError('');
-  }
-
-  function adoptAdvisorEdict(text: string, advisedPolicyIds: string[]) {
-    setEdictText(text);
-    setAdvisorPolicyIds(advisedPolicyIds.length ? advisedPolicyIds.slice(0, 2) : null);
-    setAdvisorDraftActive(true);
     setInterpretation(null);
     setPolicyIds([]);
     setError('');
@@ -138,8 +126,6 @@ export function App() {
       setState(next.state);
       setResult({ event: next.event, record: next.record, ...(narrative ? { narrative } : {}), ...(aiError ? { aiError } : {}) });
       setPolicyIds([]);
-      setAdvisorPolicyIds(null);
-      setAdvisorDraftActive(false);
       setEdictText('');
       setInterpretation(null);
     } catch (caught) {
@@ -150,26 +136,7 @@ export function App() {
   async function issueEdict() {
     setAIBusy('正在拟旨、用玺并推演半年施政');
     try {
-      let parsed = advisorPolicyIds?.length
-        ? {
-            sourceText: edictText.trim(),
-            policyIds: advisorPolicyIds,
-            officerId: null,
-            summary: `辅政官已将诏意限定为：${advisorPolicyIds.map((id) => policies.find((item) => item.id === id)?.name).filter(Boolean).join('、')}。`,
-            warnings: [],
-          }
-        : await interpretEdict(false);
-      if (advisorDraftActive && parsed.policyIds.length > 2) {
-        parsed = {
-          ...parsed,
-          policyIds: parsed.policyIds.slice(0, 2),
-          warnings: [...parsed.warnings, '辅政草诏本回合只保留一项主政务与一项配套政务，其余措施留待后续回合。'],
-        };
-      }
-      if (advisorPolicyIds?.length) {
-        setInterpretation(parsed);
-        setPolicyIds(parsed.policyIds);
-      }
+      const parsed = await interpretEdict(false);
       if (!parsed.policyIds.length) return;
       await settle(parsed, parsed.policyIds, parsed.officerId ?? officerId, false);
     } finally {
@@ -178,7 +145,7 @@ export function App() {
   }
 
   function restart() {
-    setState(createInitialState()); setPolicyIds([]); setEdictText(''); setAdvisorPolicyIds(null); setAdvisorDraftActive(false); setInterpretation(null); setOfficerId(officers[0]?.id ?? '');
+    setState(createInitialState()); setPolicyIds([]); setEdictText(''); setInterpretation(null); setOfficerId(officers[0]?.id ?? '');
     setDilemmaBaseline(null); setFocusedDilemmaId(null); setPanel(null); setResult(null); setError('');
   }
 
@@ -201,12 +168,12 @@ export function App() {
       {panel === 'archive' && <OfficerArchive selectedOfficerId={officerId} onAppoint={(id) => { setOfficerId(id); setArchiveReturnsToEdict(false); setPanel('edict'); }} />}
       {panel === 'records' && <Records state={state} />}
       {panel === 'saves' && <SaveArchive state={state} officerId={officerId} onLoad={(savedState, savedOfficerId) => {
-        setState(savedState); setOfficerId(savedOfficerId); setPolicyIds([]); setEdictText(''); setAdvisorPolicyIds(null); setAdvisorDraftActive(false);
+        setState(savedState); setOfficerId(savedOfficerId); setPolicyIds([]); setEdictText('');
         setInterpretation(null); setDilemmaBaseline(null); setFocusedDilemmaId(null); setResult(null); setError(''); setPanel(null);
       }} />}
       {panel === 'edict' && <div className="edict-stage">
         <div className="edict-advisor-column">
-          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} onAdopt={adoptAdvisorEdict} setBusy={setAIBusy} />
+          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} setBusy={setAIBusy} />
         </div>
         <div className="edict-workspace">
           <div className="edict-composer">
@@ -588,8 +555,8 @@ function Records({ state }: { state: GameState }) {
   </div>;
 }
 
-function AdvisorWorkspace({ state, event, officer, currentEdict, config, onAdopt, setBusy }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; onAdopt: (text: string, policyIds: string[]) => void; setBusy: (text: string) => void }) {
-  const [question, setQuestion] = useState('请结合当前困境，分析我应优先处理什么，并拟一份兼顾执行与民生的诏书。');
+function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; setBusy: (text: string) => void }) {
+  const [question, setQuestion] = useState('请按财政、民生、军事、吏治列出一主一辅的施政提纲。');
   const [advice, setAdvice] = useState<AdvisorAdvice | null>(null);
   const [advisorError, setAdvisorError] = useState('');
 
@@ -607,12 +574,12 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, onAdopt
 
   return <section className="advisor-workspace">
     <header><div><span>颁诏前咨询 · 御前参详</span><h3>{advice ? '格局判断' : '辅政官'}</h3></div><small>{config.model}</small></header>
-    <p>{advice ? '辅政官已据当前国势参详利害，以下判断与草诏仍由陛下裁定。' : '辅政官以儒家治道为纲，比较路线利害权衡轻重；是否采用、如何修改、何时用玺仍由陛下裁定。'}</p>
+    <p>{advice ? '辅政官已据当前行政余量列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官只列施政提纲与主辅取舍；诏书正文仍须由陛下亲自裁定。'}</p>
     <div className="advisor-question"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
     {advice && <>
-      <div className="advisor-answer"><p>{advice.situation}</p>{advice.priorities.length > 0 && <div className="chips light">{advice.priorities.map((item) => <span key={item}>{item}</span>)}</div>}<div className="advisor-routes">{advice.options.map((item) => <article key={item.title}><strong>{item.title}</strong><span>可得：{item.benefit}</span><small>代价：{item.risk}</small></article>)}</div>{advice.cautions.length > 0 && <div className="advisor-cautions">{advice.cautions.map((item) => <p key={item}>· {item}</p>)}</div>}<div className="advisor-draft"><h4>辅政草诏</h4><pre>{advice.draftEdict}</pre></div></div>
-      <button className="advisor-adopt" type="button" onClick={() => onAdopt(advice.draftEdict, advice.policyIds)}>置入御案，继续修改</button>
+      <div className="advisor-answer"><div className="advisor-draft"><h4>参详提纲</h4><pre>{advice.outline}</pre></div></div>
+      <button className="advisor-adopt" type="button" disabled>请据提纲自行拟诏</button>
     </>}
   </section>;
 }

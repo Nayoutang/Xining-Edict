@@ -30,4 +30,10 @@ describe('自由诏书解析', () => {
     expect(result.policyIds).toContain('discipline-corrupt-officials');
     expect(result.officerId).toBe('zeng-bu');
   });
+
+  it('把提纲中的吏治与地方执行措辞解析为州县执行政务', () => {
+    const result = parseEdict('核对三司账簿，限期一月；整顿吏治，逐级核验诏令能否落到州县。');
+
+    expect(result.policyIds).toEqual(['curb-local-exactions', 'cross-check-ledgers']);
+  });
 });

@@ -20,12 +20,16 @@ export interface HistoricalNarrative {
 }
 
 export interface AdvisorAdvice {
-  situation: string;
-  priorities: string[];
-  options: Array<{ title: string; benefit: string; risk: string }>;
+  outline: string;
+  dimensions: Array<{
+    name: '财政' | '民生' | '军事' | '吏治';
+    scope: string;
+    role: '主' | '辅' | '暂缓';
+    advice: string;
+    policyId: string;
+  }>;
+  personnel: string;
   policyIds: string[];
-  draftEdict: string;
-  cautions: string[];
 }
 
 const hostedApiBase = 'https://xining-api.nayoutang3.workers.dev';
