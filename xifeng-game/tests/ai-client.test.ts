@@ -16,7 +16,9 @@ describe('辅政官响应协议兼容', () => {
     expect(advice.dimensions.filter((item) => item.role === '辅')).toHaveLength(1);
     expect(advice.dimensions.filter((item) => item.role === '暂缓')).toHaveLength(2);
     expect(advice.outline).not.toContain('制曰');
-    expect(advice.outline.length).toBeLessThanOrEqual(200);
+    expect(advice.outline).toContain('局势研判:');
+    expect(advice.outline).toContain('须裁定：');
+    expect(advice.outline.length).toBeLessThanOrEqual(900);
   });
 
   it('旧版线上响应也会按回合改换着力点并标明续办', () => {
@@ -35,6 +37,8 @@ describe('辅政官响应协议兼容', () => {
     expect(advice.dimensions.find((item) => item.role === '主')?.name).toBe('军事');
     expect(advice.dimensions.find((item) => item.name === '吏治')?.advice.startsWith('续办')).toBe(true);
     expect(advice.dimensions.find((item) => item.name === '军事')?.advice).toContain('寨堡');
+    expect(advice.personnelRecommendation?.officeName).toBe('枢密院');
+    expect(advice.outline).toContain('铨选建议:');
     expect(advice.dimensions.filter((item) => item.role === '暂缓').map((item) => item.advice).join('')).not.toMatch(/限期|核查|逐级核验|增兵/);
   });
 });

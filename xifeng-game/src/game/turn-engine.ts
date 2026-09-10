@@ -4,6 +4,7 @@ import { getPolicy } from '../data/policies';
 import { evaluateEnding } from './endings';
 import { evaluateObjectives } from './objectives';
 import { evaluateDilemmas } from './dilemmas';
+import { getCourtPolicySupport } from './polity';
 import type {
   GameState,
   IndicatorKey,
@@ -85,8 +86,9 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
   const beforeResources = { ...state.resources };
   const officer = getOfficer(decision.officerId)!;
   const event = getHistoricalEvent(state.turn);
+  const courtSupports = decision.policyIds.map((policyId) => getCourtPolicySupport(state, policyId));
   const administrationRequired = decision.policyIds.reduce(
-    (total, policyId) => total + (getPolicy(policyId)?.cost.administration ?? 0), 0,
+    (total, policyId, index) => total + Math.max(0, (getPolicy(policyId)?.cost.administration ?? 0) + courtSupports[index]!.administrationModifier), 0,
   );
   const politicalCapitalRequired = decision.policyIds.reduce(
     (total, policyId) => total + (getPolicy(policyId)?.cost.politicalCapital ?? 0), officer.politicalCostModifier,
@@ -97,15 +99,17 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
   addChanges(state.indicators, event.effects);
   if (event.resourceEffects) addChanges(state.resources, event.resourceEffects);
 
-  for (const policyId of decision.policyIds) {
+  for (const [index, policyId] of decision.policyIds.entries()) {
     const policy = getPolicy(policyId)!;
     const adjustedCost = { ...policy.cost };
+    adjustedCost.administration = Math.max(0, (adjustedCost.administration ?? 0) + courtSupports[index]!.administrationModifier);
     for (const key of resourceKeys) state.resources[key] -= adjustedCost[key] ?? 0;
 
     addChanges(state.indicators, policy.immediateEffects);
     if (policy.tags.some((tag) => officer.specialtyTags.includes(tag))) {
       state.indicators.execution += officer.executionBonus;
     }
+    state.indicators.execution += courtSupports[index]!.executionModifier;
 
     for (const risk of policy.risks) {
       const triggered = Object.entries(risk.whenIndicatorBelow ?? {}).every(
@@ -150,6 +154,7 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
     resourceChanges: difference(beforeResources, state.resources),
     administrativeOverload,
     politicalOverdraft,
+    courtEffects: courtSupports.map((support) => support.message).filter(Boolean),
     ...(decision.edictNote ? { edictText: decision.edictNote } : {}),
   };
   state.history.push(record);

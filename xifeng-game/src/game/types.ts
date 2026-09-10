@@ -161,6 +161,7 @@ export interface TurnRecord {
   resourceChanges: NumericChanges<ResourceKey>;
   administrativeOverload: number;
   politicalOverdraft: number;
+  courtEffects?: string[];
   edictText?: string;
   aiSummary?: string;
 }

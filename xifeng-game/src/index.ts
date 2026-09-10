@@ -1,6 +1,6 @@
 export { createInitialState } from './game/initial-state';
 export { getPoliticalCapitalRecovery, settleTurn } from './game/turn-engine';
-export { appointCourtOfficer, dismissCourtOfficer, isCourtOfficerAppointed } from './game/polity';
+export { appointCourtOfficer, courtOfficeFocusTags, describeCourtCandidateFit, dismissCourtOfficer, getCourtPolicySupport, isCourtOfficerAppointed } from './game/polity';
 export { policies } from './data/policies';
 export { officers, officerGroups, officerTagLabels } from './data/officers';
 export { historicalEvents } from './data/events';

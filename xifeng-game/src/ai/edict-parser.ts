@@ -54,7 +54,9 @@ export function parseEdict(text: string): EdictInterpretation {
       if (!lineHasPolicy && fallbackId && !policyIds.includes(fallbackId)) policyIds.push(fallbackId);
     }
   }
-  const officer = officers.find((item) => sourceText.includes(item.name)) ?? null;
+  // 辅政官提纲的铨选建议只是参考，不得暗中改掉本回合承办官。
+  const officerSource = outlineLines.length >= 2 ? policySource : sourceText;
+  const officer = officers.find((item) => officerSource.includes(item.name)) ?? null;
   if (!policyIds.length) {
     policyIds.push('open-ended-directive');
     warnings.push('此诏超出现有政务规则，已按御前专项政务承接；补充对象、措施、期限和监督办法可降低执行变形。');

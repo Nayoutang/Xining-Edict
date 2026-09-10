@@ -1,14 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/game/initial-state';
-import { appointCourtOfficer, dismissCourtOfficer } from '../src/game/polity';
+import { appointCourtOfficer, dismissCourtOfficer, getCourtPolicySupport } from '../src/game/polity';
 
 describe('朝廷官制任免', () => {
   it('可以更换核心官职且不修改原状态', () => {
     const initial = createInitialState();
     const next = appointCourtOfficer(initial, 'finance', 'finance-commissioner', 'sima-guang');
 
-    expect(initial.polity.offices.find((office) => office.key === 'finance')?.posts[0]?.appointeeId).toBe('zeng-bu');
+    expect(initial.polity.offices.find((office) => office.key === 'finance')?.posts[0]?.appointeeId).toBeNull();
     expect(next.polity.offices.find((office) => office.key === 'finance')?.posts[0]?.appointeeId).toBe('sima-guang');
+  });
+
+  it('以熙宁二年固定官制开局，不预设制度改造', () => {
+    const initial = createInitialState();
+    expect(initial.polity.offices.every((office) => office.reform === '旧制未改')).toBe(true);
+    expect(initial.polity.offices.find((office) => office.key === 'military')?.posts[0]?.appointeeId).toBe('wen-yanbo');
+    expect(initial.polity.offices.find((office) => office.key === 'transport')?.posts[0]?.appointeeId).toBeNull();
+    expect(initial.polity.offices.find((office) => office.key === 'censorate')?.posts[1]?.appointeeId).toBeNull();
+  });
+
+  it('岗位空缺会增加相关政务负担，适任官员可消除并提高执行', () => {
+    const initial = createInitialState();
+    expect(getCourtPolicySupport(initial, 'cross-check-ledgers')).toMatchObject({ officeKey: 'finance', administrationModifier: 1, executionModifier: -1 });
+    const appointed = appointCourtOfficer(initial, 'finance', 'finance-commissioner', 'zeng-bu');
+    expect(getCourtPolicySupport(appointed, 'cross-check-ledgers')).toMatchObject({ administrationModifier: -1, executionModifier: 1 });
   });
 
   it('可以罢免核心官职并保留机构与其他席位', () => {

@@ -1,5 +1,6 @@
 import { isAdvisorOutline, parseEdict, type EdictInterpretation } from './edict-parser';
-import type { GameState, HistoricalEvent, Officer, Policy, TurnRecord } from '../game/types';
+import { officers } from '../data/officers';
+import type { CourtOfficeKey, GameState, HistoricalEvent, Officer, Policy, PolicyTag, TurnRecord } from '../game/types';
 
 export interface AIConfig {
   provider: 'deepseek' | 'openai' | 'anthropic' | 'qwen' | 'kimi' | 'zhipu' | 'custom';
@@ -21,14 +22,26 @@ export interface HistoricalNarrative {
 
 export interface AdvisorAdvice {
   outline: string;
+  situation: string;
   dimensions: Array<{
     name: '财政' | '民生' | '军事' | '吏治';
     scope: string;
     role: '主' | '辅' | '暂缓';
     advice: string;
+    decision?: string | undefined;
     policyId: string;
   }>;
   personnel: string;
+  personnelRecommendation?: {
+    officeKey: string;
+    postKey: string;
+    officeName: string;
+    postTitle: string;
+    officerId: string;
+    officerName: string;
+    reason: string;
+    risk: string;
+  } | undefined;
   policyIds: string[];
 }
 
@@ -55,12 +68,115 @@ const policyDimension: Record<string, AdvisorAdvice['dimensions'][number]['name'
   'discipline-corrupt-officials': '吏治',
 };
 
-export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameState | number): AdvisorAdvice {
-  const advice = value as Partial<AdvisorAdvice> & LegacyAdvisorAdvice;
-  if (typeof advice?.outline === 'string' && Array.isArray(advice.dimensions)) return advice as AdvisorAdvice;
+const dimensionLabels = { finance: '财用', livelihood: '民生', defense: '边备', courtSupport: '士论', execution: '执行' } as const;
+const dimensionPersonnel: Record<AdvisorAdvice['dimensions'][number]['name'], { officeKey: CourtOfficeKey; tags: readonly PolicyTag[] }> = {
+  '财政': { officeKey: 'finance', tags: ['finance'] },
+  '民生': { officeKey: 'transport', tags: ['relief', 'administration'] },
+  '军事': { officeKey: 'military', tags: ['military'] },
+  '吏治': { officeKey: 'censorate', tags: ['administration'] },
+} as const;
 
+function qualitative(value: number): string {
+  if (value < 30) return '危急';
+  if (value < 45) return '偏低';
+  if (value < 60) return '尚可';
+  return '稳固';
+}
+
+function fallbackSituation(state: GameState | null, mainName: string, supportName: string, event?: HistoricalEvent): string {
+  if (!state) return `当前应先处置${mainName}，再以${supportName}托底；其余二项暂不占用行政余量。`;
+  const ranked = Object.entries(state.indicators)
+    .map(([key, value]) => ({ key: key as keyof typeof dimensionLabels, value }))
+    .sort((left, right) => left.value - right.value);
+  const weakest = ranked.slice(0, 2).map((item) => `${dimensionLabels[item.key]}${item.value}（${qualitative(item.value)}）`).join('、');
+  const previous = state.history.at(-1);
+  const trend = previous
+    ? ranked.slice(0, 2).map((item) => {
+      const delta = previous.indicatorChanges[item.key] ?? 0;
+      return `${dimensionLabels[item.key]}${delta > 0 ? '回升' : delta < 0 ? '下滑' : '持平'}${delta ? Math.abs(delta) : ''}`;
+    }).join('、')
+    : '尚无上期结算可供比较';
+  const stage = state.turn <= 2 ? '前期摸底' : state.turn <= 5 ? '中期推行与纠偏' : '后期巩固与善后';
+  const eventText = event ? `本回急务是“${event.title}”：${event.description}` : '本回急务尚待结合御案事件判断';
+  return `现处第${state.turn}/${state.maxTurns}回的${stage}阶段。国势最薄之处是${weakest}；${trend}。${eventText}。国库${state.resources.treasury}万贯、政略${state.resources.politicalCapital}、行政${state.resources.administration}/50，本期可承受一主一辅，但不宜同时铺开四项。因此先攻${mainName}，以${supportName}托底。`;
+}
+
+function recommendPersonnel(state: GameState | null, mainName: AdvisorAdvice['dimensions'][number]['name']): AdvisorAdvice['personnelRecommendation'] | undefined {
+  if (!state) return undefined;
+  const target = dimensionPersonnel[mainName];
+  const office = state.polity.offices.find((item) => item.key === target.officeKey);
+  if (!office) return undefined;
+  const appointed = new Set(state.polity.offices.flatMap((item) => item.posts.map((post) => post.appointeeId).filter(Boolean)));
+  const candidates = officers
+    .filter((item) => !appointed.has(item.id) && item.specialtyTags.some((tag) => target.tags.includes(tag)))
+    .sort((left, right) => (right.executionBonus - right.politicalCostModifier * .4) - (left.executionBonus - left.politicalCostModifier * .4));
+  const candidate = candidates[0];
+  const post = office.posts.find((item) => !item.appointeeId) ?? office.posts[0];
+  if (!candidate || !post) return undefined;
+  return {
+    officeKey: office.key,
+    postKey: post.key,
+    officeName: office.name,
+    postTitle: post.title,
+    officerId: candidate.id,
+    officerName: candidate.name,
+    reason: `${candidate.name}所长与${office.name}职掌相合，可使${mainName}政务少耗行政、更易落实。`,
+    risk: candidate.politicalCostModifier >= 2 ? `${candidate.stance}，改授可能增加朝议阻力。` : `${candidate.stance}，仍须留意其施政主张与御前取舍的差异。`,
+  };
+}
+
+function decisionFor(name: AdvisorAdvice['dimensions'][number]['name'], role: string): string | undefined {
+  if (role === '暂缓') return undefined;
+  const decisions = {
+    '财政': '须裁定：先封存争议账目，还是允许三司自查后再追责。',
+    '民生': '须裁定：先减免已查实重户，还是等全路造册后一并处置。',
+    '军事': '须裁定：优先补军粮还是修寨堡，本期只能先保一项。',
+    '吏治': '须裁定：先准州县自纠，还是直接追责承办主官。',
+  } as const;
+  return decisions[name];
+}
+
+function clarifyAdvice(item: AdvisorAdvice['dimensions'][number], state: GameState | null): string {
+  if (item.role === '暂缓' || item.advice.length >= 48) return item.advice;
+  const value = state ? item.name === '财政' ? state.indicators.finance : item.name === '民生' ? state.indicators.livelihood : item.name === '军事' ? state.indicators.defense : state.indicators.execution : null;
+  const context = value === null ? '' : `${item.name === '吏治' ? '执行' : item.name}${value}（${qualitative(value)}）。`;
+  const explanation = {
+    '财政': '具体是让三司把账面数、实际入库数和未收数逐项对上，一月内列出差额与责任人。',
+    '民生': '具体是让监司按户籍核对实际负担，查明哪些民户被加派、多收什么，一月内回报。',
+    '军事': '具体是让陕西帅司分寨堡核对现有军粮与可支应日数，十日内报出最紧缺之处。',
+    '吏治': '具体是让监司把诏令逐条对照州县收文、办理与结案记录，一月内查明哪一环积压或擅改。',
+  }[item.name];
+  return item.advice.startsWith('续办') ? `${item.advice}${context}${explanation}` : `${context}${item.advice}${explanation}`;
+}
+
+function renderAdvisorOutline(administration: number, dimensions: AdvisorAdvice['dimensions'], situation: string, recommendation?: AdvisorAdvice['personnelRecommendation']): string {
+  const personnelLines = recommendation ? [
+    '铨选建议:',
+    `岗位:${recommendation.officeName}·${recommendation.postTitle}`,
+    `推荐:${recommendation.officerName}`,
+    `理由:${recommendation.reason}`,
+    `风险:${recommendation.risk}`,
+  ] : ['铨选建议:本期无合适的未任候选人。'];
+  return [
+    '局势研判:', situation, '', `行政余量:${Math.max(0, Math.round(administration || 0))}/50`, '',
+    ...dimensions.flatMap((item) => [`${item.name}|(${item.scope})【${item.role}】${item.advice}`, ...(item.decision ? [`  ${item.decision}`] : [])]),
+    '', ...personnelLines,
+  ].join('\n');
+}
+
+export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameState | number, event?: HistoricalEvent): AdvisorAdvice {
+  const advice = value as Partial<AdvisorAdvice> & LegacyAdvisorAdvice;
   const state = typeof stateOrAdministration === 'number' ? null : stateOrAdministration;
   const administration = typeof stateOrAdministration === 'number' ? stateOrAdministration : stateOrAdministration.resources.administration;
+  if (Array.isArray(advice.dimensions) && advice.dimensions.length) {
+    const dimensions = advice.dimensions.map((item) => ({ ...item, advice: clarifyAdvice(item, state), decision: item.decision || decisionFor(item.name, item.role) }));
+    const mainName = dimensions.find((item) => item.role === '主')?.name ?? '财政';
+    const supportName = dimensions.find((item) => item.role === '辅')?.name ?? '民生';
+    const situation = typeof advice.situation === 'string' && advice.situation.trim() ? advice.situation.trim() : fallbackSituation(state, mainName, supportName, event);
+    const personnelRecommendation = recommendPersonnel(state, mainName);
+    const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : '本期无合适的未任候选人。';
+    return { outline: renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation), situation, dimensions, personnel, personnelRecommendation, policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId) };
+  }
   const turn = Math.max(1, Math.min(8, Math.round(state?.turn ?? 1)));
   const previousPolicyIds = new Set(state?.history.flatMap((record) => record.policyIds) ?? []);
 
@@ -82,20 +198,22 @@ export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameSt
       policyId: item.policyId,
       role,
       advice: role === '暂缓' ? item.paused[turn - 1] ?? item.paused.at(-1)! : previousPolicyIds.has(item.policyId) ? `续办，${action}` : action,
+      decision: decisionFor(item.name, role),
     };
   });
-  const personnel = '暂无调任建议。';
-  const outline = [
-    `行政余量:${Math.max(0, Math.round(administration || 0))}/50`,
-    '',
-    ...dimensions.map((item) => `${item.name}|(${item.scope})【${item.role}】${item.advice}`),
-    '',
-    `人事:${personnel}`,
-  ].join('\n');
+  for (const item of dimensions) {
+    item.advice = clarifyAdvice(item, state);
+  }
+  const situation = fallbackSituation(state, selectedNames[0]!, selectedNames[1]!, event);
+  const personnelRecommendation = recommendPersonnel(state, selectedNames[0]!);
+  const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : '本期无合适的未任候选人。';
+  const outline = renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation);
   return {
     outline,
+    situation,
     dimensions,
     personnel,
+    personnelRecommendation,
     policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId),
   };
 }
@@ -163,7 +281,7 @@ export async function consultAdvisorRemote(input: {
   });
   const data = await response.json();
   if (!response.ok || !data.ok) throw new Error(data.error || '辅政官未能完成参详');
-  return adaptAdvisorAdvice(data.advice, input.state);
+  return adaptAdvisorAdvice(data.advice, input.state, input.event);
 }
 
 export async function testAIConnectionRemote(config: AIConfig): Promise<string> {

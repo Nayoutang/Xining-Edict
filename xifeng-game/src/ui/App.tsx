@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArchiveRestore, BookOpenText, CircleDollarSign, Landmark, LibraryBig, LoaderCircle, RotateCcw, Save, Scale, ScrollText, Search, Shield, Trash2, Users, X } from 'lucide-react';
-import { appointCourtOfficer, createInitialState, dismissCourtOfficer, historicalEvents, isCourtOfficerAppointed, officers, officerTagLabels, parseEdict, policies, settleTurn } from '..';
+import { appointCourtOfficer, createInitialState, describeCourtCandidateFit, dismissCourtOfficer, historicalEvents, isCourtOfficerAppointed, officers, officerTagLabels, parseEdict, policies, settleTurn } from '..';
 import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, providerDefaults, testAIConnectionRemote } from '../ai/client';
 import type { AdvisorAdvice, AIConfig, CourtOfficeKey, CourtPostKey, DilemmaProgress, EdictInterpretation, GameState, HistoricalEvent, HistoricalNarrative, IndicatorKey, Officer, TurnRecord } from '..';
 import { GameScreen } from './GameScreen';
@@ -302,6 +302,7 @@ function CourtAppointments({ state, onAppoint, onDismiss }: {
   }, [availableCandidates, selectedPost.key]);
 
   const selectedCandidate = availableCandidates.find((item) => item.id === candidateId);
+  const candidateFit = selectedCandidate ? describeCourtCandidateFit(selectedOffice.key, selectedCandidate.id) : null;
   const selectOffice = (officeKey: CourtOfficeKey) => {
     const office = state.polity.offices.find((item) => item.key === officeKey);
     if (!office) return;
@@ -378,6 +379,7 @@ function CourtAppointments({ state, onAppoint, onDismiss }: {
               aria-label="拟授人选"
               aria-haspopup="listbox"
               aria-expanded={candidateOpen}
+              title={candidateFit ? `岗位适配${candidateFit.level}：${candidateFit.text}` : undefined}
               disabled={!availableCandidates.length}
               onClick={() => setCandidateOpen((open) => !open)}
             >
@@ -385,17 +387,21 @@ function CourtAppointments({ state, onAppoint, onDismiss }: {
               <i aria-hidden="true" />
             </button>
             {candidateOpen && <div className="court-candidate-list" role="listbox" aria-label="官员候选名单">
-              {availableCandidates.map((item) => <button
-                key={item.id}
-                type="button"
-                role="option"
-                aria-selected={candidateId === item.id}
-                className={candidateId === item.id ? 'selected' : ''}
-                onClick={() => {
-                  setCandidateId(item.id);
-                  setCandidateOpen(false);
-                }}
-              ><strong>{item.name}</strong><span>待任 · {item.specialtyTags.map((tag) => tagLabels[tag]).join('、')}</span></button>)}
+              {availableCandidates.map((item) => {
+                const fit = describeCourtCandidateFit(selectedOffice.key, item.id);
+                return <button
+                  key={item.id}
+                  type="button"
+                  role="option"
+                  aria-selected={candidateId === item.id}
+                  className={candidateId === item.id ? 'selected' : ''}
+                  title={fit.text}
+                  onClick={() => {
+                    setCandidateId(item.id);
+                    setCandidateOpen(false);
+                  }}
+                ><strong>{item.name}</strong><span>岗位适配{fit.level} · {item.specialtyTags.map((tag) => tagLabels[tag]).join('、')}</span></button>;
+              })}
             </div>}
           </div>
         </dd></div>
@@ -544,7 +550,7 @@ function Records({ state }: { state: GameState }) {
       {selected ? <div className="records-detail-scroll">
         <section><h3>本回纪要</h3><p>· {selected.aiSummary ? localizeDisplayText(selected.aiSummary) : `围绕「${selected.eventTitle}」颁行诏令，交付有司与州县施行。`}</p>{selected.administrativeOverload > 0 && <p>· 行政超载 {selected.administrativeOverload}，部分政令在传达中延宕变形。</p>}{selected.politicalOverdraft > 0 && <p>· 政略透支 {selected.politicalOverdraft}，诏令虽已颁行，但士论与执行受到额外损耗。</p>}</section>
         <section><h3>颁行诏令</h3>{edictLines.length ? edictLines.map((line) => <p key={line}>· {line}。</p>) : <p>· 本回未留下诏令正文。</p>}</section>
-        <section><h3>半年结算</h3><p>· {selected.eventTitle}</p><div className="records-settlement">{settlement.length ? settlement.map((item) => <strong key={item}>{item}</strong>) : <span>诸项无显著变动</span>}</div></section>
+        <section><h3>半年结算</h3><p>· {selected.eventTitle}</p>{selected.courtEffects?.map((item) => <p key={item}>· {item}</p>)}<div className="records-settlement">{settlement.length ? settlement.map((item) => <strong key={item}>{item}</strong>) : <span>诸项无显著变动</span>}</div></section>
       </div> : <div className="records-unwritten"><BookOpenText /><strong>此回尚未载录</strong><p>待半年政务结算后，史官将在此补记诏令与朝局变化。</p></div>}
       <nav className="records-pagination" aria-label="起居注翻页">
         <button type="button" disabled={previousTurn === null} onClick={() => previousTurn !== null && setSelectedTurn(previousTurn)}>‹ <span>上一回</span></button>
@@ -576,7 +582,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
 
   return <section className="advisor-workspace">
     <header><div><span>颁诏前咨询 · 御前参详</span><h3>{advice ? '格局判断' : '辅政官'}</h3></div><small>{config.model}</small></header>
-    <p>{advice ? '辅政官已据当前行政余量列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官只列施政提纲与主辅取舍；诏书正文仍须由陛下亲自裁定。'}</p>
+    <p>{advice ? '辅政官已据当前国势、余量与官署人事列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官会先说明当前局势，再列施政取舍与铨选建议；诏书正文仍由陛下裁定。'}</p>
     <div className="advisor-question"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
     {advice && <>
@@ -736,6 +742,7 @@ function Result({ result, state, onClose }: {
               <p>{situation}</p>
               {result.record.administrativeOverload > 0 && <small>行政超载 {result.record.administrativeOverload}：部分政令在传达和执行中延宕变形。</small>}
               {result.record.politicalOverdraft > 0 && <small>政略透支 {result.record.politicalOverdraft}：诏令已经颁行，但士论与执行额外受损。</small>}
+              {result.record.courtEffects?.map((item) => <small key={item}>{item}</small>)}
             </div>
           </section>
 

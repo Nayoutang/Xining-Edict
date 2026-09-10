@@ -214,8 +214,12 @@ describe('半年回合结算', () => {
 
     expect(result.record.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
     expect(result.record.administrativeOverload).toBe(0);
-    expect(result.record.resourceChanges.administration).toBe(-4);
-    expect(result.state.resources.administration).toBe(36);
+    expect(result.record.resourceChanges.administration).toBe(-6);
+    expect(result.state.resources.administration).toBe(34);
+    expect(result.record.courtEffects).toEqual(expect.arrayContaining([
+      expect.stringContaining('三司：主官虚位'),
+      expect.stringContaining('诸路转运司：主官虚位'),
+    ]));
   });
 
   it('整饬吏治政务无需硬前置即可直接执行', () => {

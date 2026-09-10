@@ -53,6 +53,13 @@ describe('自由诏书解析', () => {
     expect(result.policyIds).not.toContain('northwest-defense');
   });
 
+  it('提纲中的铨选人名不会自动变更本回合承办官', () => {
+    const outline = `局势研判:\n执行偏低，本期先查州县。\n\n行政余量:37/50\n\n财政|(国库与岁入)【主】核清三司账簿。\n民生|(百姓负担)【辅】核定灾伤户实负。\n军事|(边备与军储)【暂缓】边警尚缓。\n吏治|(诏令能否落到州县)【暂缓】有司方忙。\n\n铨选建议:\n岗位:三司·三司使\n推荐:曾布`;
+    const result = parseEdict(outline);
+    expect(result.officerId).toBeNull();
+    expect(result.warnings).toContain('诏书未指名执行官，将沿用御前当前任命。');
+  });
+
   it('正常据提纲改写的诏书仍可提交并匹配财政与吏治', () => {
     const result = parseEdict('命曾布于一月内对勘三司账簿，并令监司抽验京东州县奉行实况，逐件复奏。');
     expect(result.policyIds).toContain('cross-check-ledgers');

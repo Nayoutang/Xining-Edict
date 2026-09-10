@@ -137,11 +137,73 @@ var pausedReasons = {
   \u519B\u4E8B: ["\u8FB9\u8B66\u672A\u81F3\u6025\u8FEB\uFF0C\u672C\u671F\u8D22\u529B\u5B9C\u987E\u4E3B\u52A1\u3002", "\u519B\u50A8\u5C1A\u53EF\u652F\u5E94\uFF0C\u672C\u671F\u8FB9\u52A1\u5E76\u975E\u77ED\u677F\u3002", "\u8FB9\u60C5\u672A\u89C1\u9AA4\u53D8\uFF0C\u672C\u671F\u65E0\u9700\u5360\u7528\u4F59\u91CF\u3002", "\u73B0\u6709\u5BE8\u5821\u53EF\u5B88\uFF0C\u672C\u671F\u6025\u52A1\u53E6\u6709\u6240\u5C5E\u3002", "\u519B\u9700\u538B\u529B\u53EF\u63A7\uFF0C\u672C\u671F\u4E3B\u8F85\u4E0D\u5728\u8FB9\u5907\u3002", "\u672C\u671F\u5185\u653F\u66F4\u6025\uFF0C\u8FB9\u52A1\u6682\u65E0\u8FEB\u5207\u4E4B\u52BF\u3002", "\u8FB9\u5907\u5DF2\u7A0D\u7A33\uFF0C\u672C\u671F\u4E0D\u5B9C\u5206\u6563\u56FD\u529B\u3002", "\u7EC8\u5C40\u8FB9\u60C5\u53EF\u6301\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5217\u5B9E\u52A1\u3002"],
   \u540F\u6CBB: ["\u5730\u65B9\u627F\u8F7D\u5C1A\u53EF\uFF0C\u672C\u671F\u4E0D\u5B9C\u53E0\u52A0\u4E8B\u52A1\u3002", "\u6709\u53F8\u4F59\u529B\u5DF2\u7D27\uFF0C\u672C\u671F\u5E94\u7559\u4E3B\u52A1\u3002", "\u524D\u4EE4\u5C1A\u5728\u6D88\u5316\uFF0C\u672C\u671F\u540F\u6CBB\u5E76\u975E\u9996\u6025\u3002", "\u5730\u65B9\u672A\u89C1\u65B0\u58C5\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5360\u4F59\u91CF\u3002", "\u73B0\u6709\u627F\u529E\u5C1A\u7A33\uFF0C\u672C\u671F\u6025\u52A1\u5728\u522B\u9879\u3002", "\u5DDE\u53BF\u538B\u529B\u53EF\u63A7\uFF0C\u672C\u671F\u4E0D\u5B9C\u518D\u6DFB\u4E8B\u52A1\u3002", "\u6267\u884C\u5DF2\u89C1\u6539\u5584\uFF0C\u672C\u671F\u53EF\u8BA9\u4F4D\u66F4\u5F31\u56FD\u52BF\u3002", "\u7EC8\u5C40\u627F\u8F7D\u5C1A\u8DB3\uFF0C\u672C\u671F\u65E0\u9700\u53E6\u5217\u540F\u52A1\u3002"]
 };
-function conciseSentence(value, fallback, maxLength = 24) {
+function conciseSentence(value, fallback, maxLength = 72) {
   const cleaned = localizeInternalTerms(value).replace(/[\r\n|]+/g, "\uFF0C").replace(/【(?:主|辅|暂缓)】/g, "").replace(/^(?:财政|民生|军事|吏治)[：:]?/, "").replace(/(?:宜稳妥推进|酌情办理|视情况而定|统筹兼顾)/g, "").trim() || fallback;
   const firstSentence = cleaned.split(/(?<=[。！？])/u)[0] || cleaned;
   const clipped = firstSentence.length > maxLength ? `${firstSentence.slice(0, maxLength - 1).replace(/[，、；：]$/, "")}\u3002` : firstSentence;
   return /[。！？]$/.test(clipped) ? clipped : `${clipped}\u3002`;
+}
+function qualitative(value) {
+  const number = Number(value);
+  if (number < 30) return "\u5371\u6025";
+  if (number < 45) return "\u504F\u4F4E";
+  if (number < 60) return "\u5C1A\u53EF";
+  return "\u7A33\u56FA";
+}
+var advisorIndicatorLabels = { finance: "\u8D22\u7528", livelihood: "\u6C11\u751F", defense: "\u8FB9\u5907", courtSupport: "\u58EB\u8BBA", execution: "\u6267\u884C" };
+var advisorPersonnelTargets = {
+  "\u8D22\u653F": { officeKey: "finance", officerIds: ["zeng-bu", "su-zhe", "lv-huiqing"] },
+  "\u6C11\u751F": { officeKey: "transport", officerIds: ["fan-chunren", "su-shi", "cheng-hao"] },
+  "\u519B\u4E8B": { officeKey: "military", officerIds: ["wang-shao", "shen-kuo", "guo-kui"] },
+  "\u540F\u6CBB": { officeKey: "censorate", officerIds: ["sima-guang", "han-jiang", "lv-gongzhu"] }
+};
+function fallbackSituation(state, mainName, supportName, event) {
+  const indicators = state?.indicators || {};
+  const ranked = Object.entries(advisorIndicatorLabels).map(([key, label]) => ({ key, label, value: Number(indicators[key] ?? 0) })).sort((left, right) => left.value - right.value);
+  const weakest = ranked.slice(0, 2).map((item) => `${item.label}${item.value}\uFF08${qualitative(item.value)}\uFF09`).join("\u3001");
+  const previous = state?.history?.at?.(-1);
+  const trend = previous ? ranked.slice(0, 2).map((item) => {
+    const delta = Number(previous?.indicatorChanges?.[item.key] || 0);
+    return `${item.label}${delta > 0 ? "\u56DE\u5347" : delta < 0 ? "\u4E0B\u6ED1" : "\u6301\u5E73"}${delta ? Math.abs(delta) : ""}`;
+  }).join("\u3001") : "\u5C1A\u65E0\u4E0A\u671F\u7ED3\u7B97\u53EF\u4F9B\u6BD4\u8F83";
+  const turn = Math.max(1, Number(state?.turn || 1));
+  const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
+  const eventText = event?.title ? `\u672C\u56DE\u6025\u52A1\u662F\u201C${event.title}\u201D\uFF1A${event.description || "\u8BE6\u60C5\u672A\u8F7D"}` : "\u672C\u56DE\u6025\u52A1\u5C1A\u5F85\u7ED3\u5408\u5FA1\u6848\u4E8B\u4EF6\u5224\u65AD";
+  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u56FD\u52BF\u6700\u8584\u4E4B\u5904\u662F${weakest}\uFF1B${trend}\u3002${eventText}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u53EF\u627F\u53D7\u4E00\u4E3B\u4E00\u8F85\uFF0C\u4E0D\u5B9C\u56DB\u9762\u94FA\u5F00\u3002\u56E0\u6B64\u5148\u653B${mainName}\uFF0C\u4EE5${supportName}\u6258\u5E95\u3002`;
+}
+function normalizeSituation(value, state, mainName, supportName, event) {
+  const cleaned = localizeInternalTerms(value).replace(/[\r\n|]+/g, "\uFF0C").trim();
+  return (cleaned || fallbackSituation(state, mainName, supportName, event)).slice(0, 320);
+}
+function decisionFor(name, role, value) {
+  if (role === "\u6682\u7F13") return "";
+  const fallbacks = {
+    "\u8D22\u653F": "\u987B\u88C1\u5B9A\uFF1A\u5148\u5C01\u5B58\u4E89\u8BAE\u8D26\u76EE\uFF0C\u8FD8\u662F\u5141\u8BB8\u4E09\u53F8\u81EA\u67E5\u540E\u518D\u8FFD\u8D23\u3002",
+    "\u6C11\u751F": "\u987B\u88C1\u5B9A\uFF1A\u5148\u51CF\u514D\u5DF2\u67E5\u5B9E\u91CD\u6237\uFF0C\u8FD8\u662F\u7B49\u5168\u8DEF\u9020\u518C\u540E\u4E00\u5E76\u5904\u7F6E\u3002",
+    "\u519B\u4E8B": "\u987B\u88C1\u5B9A\uFF1A\u4F18\u5148\u8865\u519B\u7CAE\u8FD8\u662F\u4FEE\u5BE8\u5821\uFF0C\u672C\u671F\u53EA\u80FD\u5148\u4FDD\u4E00\u9879\u3002",
+    "\u540F\u6CBB": "\u987B\u88C1\u5B9A\uFF1A\u5148\u51C6\u5DDE\u53BF\u81EA\u7EA0\uFF0C\u8FD8\u662F\u76F4\u63A5\u8FFD\u8D23\u627F\u529E\u4E3B\u5B98\u3002"
+  };
+  return conciseSentence(value, fallbacks[name], 76);
+}
+function recommendCourtPersonnel(state, mainName) {
+  const target = advisorPersonnelTargets[mainName];
+  const office = state?.polity?.offices?.find((item) => item?.key === target?.officeKey);
+  if (!target || !office) return null;
+  const appointed = new Set((state?.polity?.offices || []).flatMap((item) => (item?.posts || []).map((post2) => post2?.appointeeId).filter(Boolean)));
+  const officerId = target.officerIds.find((id) => !appointed.has(id));
+  const post = office.posts?.find((item) => !item?.appointeeId) || office.posts?.[0];
+  const officerName = allowedOfficers.find(([id]) => id === officerId)?.[1];
+  if (!officerId || !officerName || !post) return null;
+  return {
+    officeKey: office.key,
+    postKey: post.key,
+    officeName: office.name,
+    postTitle: post.title,
+    officerId,
+    officerName,
+    reason: `${officerName}\u5C65\u5386\u4E0E${office.name}\u804C\u638C\u76F8\u5408\uFF0C\u53EF\u4F7F${mainName}\u653F\u52A1\u5C11\u8017\u884C\u653F\u3001\u66F4\u6613\u843D\u5B9E\u3002`,
+    risk: "\u6539\u6388\u4F1A\u6539\u53D8\u5B98\u7F72\u7ACB\u573A\uFF0C\u987B\u540C\u65F6\u7559\u610F\u58EB\u8BBA\u4E0E\u65B0\u4EFB\u4E3B\u5B98\u7684\u65BD\u653F\u504F\u597D\u3002"
+  };
 }
 function stageForTurn(turn, maxTurns) {
   const ratio = turn / Math.max(1, maxTurns);
@@ -153,7 +215,7 @@ function pausedSentence(value, definition, turn, indicators = {}) {
   const choices = pausedReasons[definition.name];
   return choices[(turn - 1) % choices.length];
 }
-function normalizeAdvisorOutline(parsed, current, capacity, state = {}) {
+function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = {}) {
   const source = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
   const byName = new Map(source.map((item) => [localizeInternalTerms(item?.name), item]));
   let mainName = advisorDimensions.find(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "") === "\u4E3B")?.name;
@@ -169,36 +231,40 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}) {
     const requestedPolicyId = String(item?.policyId || "");
     const policyId = definition.allowed.includes(requestedPolicyId) ? requestedPolicyId : definition.policyId;
     const fallback = definition.actions[turn - 1] || definition.actions.at(-1);
-    let advice = role === "\u6682\u7F13" ? pausedSentence(item?.advice, definition, turn, state?.indicators) : conciseSentence(item?.advice, fallback);
+    let advice = role === "\u6682\u7F13" ? pausedSentence(item?.advice, definition, turn, state?.indicators) : conciseSentence(item?.advice, fallback, 72);
     const repeatedSuggestion = role !== "\u6682\u7F13" && previousAdvice.includes(advice.replace(/[。！？]$/, ""));
     if (role !== "\u6682\u7F13" && (previousPolicyIds.has(policyId) || repeatedSuggestion)) {
-      advice = conciseSentence(previousPolicyIds.has(policyId) ? `\u7EED\u529E\uFF0C${fallback}` : fallback, fallback);
+      advice = conciseSentence(previousPolicyIds.has(policyId) ? `\u7EED\u529E\uFF0C${fallback}` : fallback, fallback, 72);
     }
     return {
       name: definition.name,
       scope: definition.scope,
       role,
       advice,
+      decision: decisionFor(definition.name, role, item?.decision),
       policyId
     };
   });
-  const personnel = conciseSentence(parsed.personnel, "\u6682\u65E0\u8C03\u4EFB\u5EFA\u8BAE\u3002", 20);
-  const render = (items, personnelText) => [
+  const situation = normalizeSituation(parsed.situation, state, mainName, supportName, event);
+  const personnelRecommendation = recommendCourtPersonnel(state, mainName);
+  const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}\uFF0C\u8350${personnelRecommendation.officerName}\u3002` : conciseSentence(parsed.personnel, "\u672C\u671F\u65E0\u5408\u9002\u7684\u672A\u4EFB\u5019\u9009\u4EBA\u3002", 72);
+  const render = (items) => [
+    "\u5C40\u52BF\u7814\u5224:",
+    situation,
+    "",
     `\u884C\u653F\u4F59\u91CF:${current}/${capacity}`,
     "",
-    ...items.map((item) => `${item.name}|(${item.scope})\u3010${item.role}\u3011${item.advice}`),
+    ...items.flatMap((item) => [`${item.name}|(${item.scope})\u3010${item.role}\u3011${item.advice}`, ...item.decision ? [`  ${item.decision}`] : []]),
     "",
-    `\u4EBA\u4E8B:${personnelText}`
+    ...personnelRecommendation ? ["\u94E8\u9009\u5EFA\u8BAE:", `\u5C97\u4F4D:${personnelRecommendation.officeName}\xB7${personnelRecommendation.postTitle}`, `\u63A8\u8350:${personnelRecommendation.officerName}`, `\u7406\u7531:${personnelRecommendation.reason}`, `\u98CE\u9669:${personnelRecommendation.risk}`] : [`\u94E8\u9009\u5EFA\u8BAE:${personnel}`]
   ].join("\n");
-  let outline = render(dimensions, personnel);
-  if (outline.length > 200) {
-    for (const item of dimensions) item.advice = conciseSentence(item.advice, item.advice, 18);
-    outline = render(dimensions, conciseSentence(personnel, "\u6682\u65E0\u8C03\u4EFB\u5EFA\u8BAE\u3002", 14));
-  }
+  const outline = render(dimensions).slice(0, 900);
   return {
     outline,
+    situation,
     dimensions,
     personnel,
+    personnelRecommendation,
     policyIds: dimensions.filter((item) => item.role !== "\u6682\u7F13").map((item) => item.policyId)
   };
 }
@@ -270,6 +336,7 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
 \u8FDB\u884C\u4E2D\u4E8B\u9879\uFF1A${activeItems.length ? JSON.stringify(activeItems) : "\u6682\u65E0"}
 \u672C\u56DE\u5408\u56F0\u5883\u4E8B\u4EF6\uFF1A${event?.title || "\u672A\u8F7D"}\u2014\u2014${event?.description || "\u672A\u8F7D"}\uFF1B\u5373\u65F6\u5F71\u54CD${JSON.stringify(event?.effects || {})}
 \u5F53\u524D\u5176\u4ED6\u56F0\u5883\uFF1A${JSON.stringify(state?.dilemmas || [])}
+\u5F53\u524D\u56FA\u5B9A\u5B98\u7F72\u4E0E\u4EFB\u804C\uFF08\u53EA\u80FD\u5EFA\u8BAE\u5728\u73B0\u6709\u5C97\u4F4D\u4E0A\u6539\u6388\u6216\u7F62\u514D\uFF0C\u4E0D\u5F97\u6539\u8BBE\u673A\u6784\uFF09\uFF1A${JSON.stringify(state?.polity || {})}
 \u5F53\u524D\u51C6\u5907\u4EFB\u7528\u7684\u6267\u884C\u5B98\uFF1A${JSON.stringify(officer)}
 \u53EF\u6267\u884C\u653F\u52A1\u53CA\u5176\u672C\u56DE\u5408\u6210\u672C\uFF1A${JSON.stringify(policyBudget)}
 \u6B64\u524D\u5404\u56DE\u8BCF\u4EE4\u4E0E\u7ED3\u7B97\uFF08\u4E0D\u5F97\u5FFD\u7565\uFF09\uFF1A
@@ -279,16 +346,25 @@ ${formatHistory(state?.history || [])}
 \u73A9\u5BB6\u5411\u8F85\u653F\u5B98\u8BE2\u95EE\uFF1A${String(question || "").trim() || "\u8BF7\u5206\u6790\u5F53\u524D\u683C\u5C40\u5E76\u63D0\u51FA\u51E0\u6761\u53EF\u884C\u8DEF\u7EBF"}
 
 \u6700\u7EC8\u663E\u793A\u6587\u672C\u5FC5\u987B\u4E25\u683C\u7B49\u4EF7\u4E8E\u4EE5\u4E0B\u683C\u5F0F\uFF0C\u884C\u653F\u4F59\u91CF\u4F7F\u7528\u5F53\u524D\u5B9E\u6570 ${administrativeRemaining}/${administrativeCapacity}\uFF1A
+\u5C40\u52BF\u7814\u5224:
+\u7528\u4E09\u81F3\u56DB\u53E5\u73B0\u4EE3\u767D\u8BDD\u8BF4\u660E\u6700\u5F31\u56FD\u52BF\u3001\u4E0A\u671F\u8D8B\u52BF\u3001\u672C\u671F\u4E8B\u4EF6\u3001\u8D44\u6E90\u80FD\u627F\u62C5\u4EC0\u4E48\uFF0C\u4EE5\u53CA\u4E3A\u4F55\u9009\u6B64\u4E3B\u8F85\u3002
+
 \u884C\u653F\u4F59\u91CF:${administrativeRemaining}/${administrativeCapacity}
 
 \u8D22\u653F|(\u56FD\u5E93\u4E0E\u5C81\u5165)\u3010\u4E3B\u3011\u5177\u4F53\u5EFA\u8BAE\uFF0C\u4E00\u53E5\u8BDD
+  \u987B\u88C1\u5B9A\uFF1A\u73A9\u5BB6\u9700\u8981\u4E8C\u9009\u4E00\u7684\u6267\u884C\u5C3A\u5EA6\u6216\u5148\u540E\u987A\u5E8F
 \u6C11\u751F|(\u767E\u59D3\u8D1F\u62C5)\u3010\u8F85\u3011\u5177\u4F53\u5EFA\u8BAE\uFF0C\u4E00\u53E5\u8BDD
+  \u987B\u88C1\u5B9A\uFF1A\u73A9\u5BB6\u9700\u8981\u4E8C\u9009\u4E00\u7684\u6267\u884C\u5C3A\u5EA6\u6216\u5148\u540E\u987A\u5E8F
 \u519B\u4E8B|(\u8FB9\u5907\u4E0E\u519B\u50A8)\u3010\u6682\u7F13\u3011\u6682\u7F13\u7406\u7531\uFF0C\u4E00\u53E5\u8BDD
 \u540F\u6CBB|(\u8BCF\u4EE4\u80FD\u5426\u843D\u5230\u5DDE\u53BF)\u3010\u6682\u7F13\u3011\u6682\u7F13\u7406\u7531\uFF0C\u4E00\u53E5\u8BDD
 
-\u4EBA\u4E8B:\u4E00\u53E5\u8BDD\u4EBA\u4E8B\u5EFA\u8BAE
+\u94E8\u9009\u5EFA\u8BAE:
+\u5C97\u4F4D:\u73B0\u6709\u5B98\u7F72\xB7\u73B0\u6709\u5B98\u804C
+\u63A8\u8350:\u672A\u5728\u5176\u4ED6\u6838\u5FC3\u5C97\u4F4D\u4EFB\u804C\u7684\u5B98\u5458
+\u7406\u7531:\u5176\u5C65\u5386\u5982\u4F55\u6539\u5584\u672C\u671F\u4E3B\u52A1
+\u98CE\u9669:\u6539\u6388\u53EF\u80FD\u5E26\u6765\u7684\u58EB\u8BBA\u6216\u65BD\u653F\u504F\u597D\u98CE\u9669
 
-\u56DB\u4E2A\u7EF4\u5EA6\u5FC5\u987B\u5168\u90E8\u5217\u51FA\uFF0C\u987A\u5E8F\u56FA\u5B9A\u4E3A\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u3002\u3010\u4E3B\u3011\u548C\u3010\u8F85\u3011\u5404\u4E14\u4EC5\u51FA\u73B0\u4E00\u6B21\uFF0C\u5176\u4F59\u4E24\u9879\u5FC5\u987B\u6807\u3010\u6682\u7F13\u3011\u3002\u6BCF\u4E2A\u7EF4\u5EA6\u6700\u591A\u4E00\u6761\u5EFA\u8BAE\uFF0C\u4E25\u7981\u9762\u9762\u4FF1\u5230\u3002\u5EFA\u8BAE\u5FC5\u987B\u5177\u4F53\u5230\u52A8\u4F5C\u3001\u5BF9\u8C61\u6216\u671F\u9650\uFF0C\u4F8B\u5982\u201C\u6838\u5BF9\u4E09\u53F8\u8D26\u7C3F\uFF0C\u9650\u671F\u4E00\u6708\u201D\uFF0C\u4E0D\u5F97\u5199\u201C\u5B9C\u7A33\u59A5\u63A8\u8FDB\u201D\u201C\u914C\u60C5\u529E\u7406\u201D\u201C\u89C6\u60C5\u51B5\u800C\u5B9A\u201D\u7B49\u7A7A\u8BDD\u3002\u4EBA\u4E8B\u5EFA\u8BAE\u5355\u72EC\u4E00\u884C\uFF0C\u4E0D\u5360\u7EF4\u5EA6\u540D\u989D\uFF1B\u65E0\u987B\u8C03\u6574\u4EBA\u4E8B\u65F6\u5199\u201C\u6682\u65E0\u8C03\u4EFB\u5EFA\u8BAE\u201D\u3002\u663E\u793A\u6587\u672C\u603B\u957F\u5EA6\u4E0D\u5F97\u8D85\u8FC7\u4E8C\u767E\u5B57\u3002\u4FDD\u7559\u514B\u5236\u7684\u6587\u8A00\u8BED\u611F\uFF0C\u4F46\u63D0\u7EB2\u4EE5\u7B80\u6D01\u4E3A\u5148\uFF0C\u4E0D\u5199\u9A88\u53E5\u3002
+\u56DB\u4E2A\u7EF4\u5EA6\u5FC5\u987B\u5168\u90E8\u5217\u51FA\uFF0C\u987A\u5E8F\u56FA\u5B9A\u4E3A\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u3002\u3010\u4E3B\u3011\u548C\u3010\u8F85\u3011\u5404\u4E14\u4EC5\u51FA\u73B0\u4E00\u6B21\uFF0C\u5176\u4F59\u4E24\u9879\u5FC5\u987B\u6807\u3010\u6682\u7F13\u3011\u3002\u6BCF\u4E2A\u7EF4\u5EA6\u6700\u591A\u4E00\u6761\u65BD\u653F\u5EFA\u8BAE\uFF0C\u4E25\u7981\u9762\u9762\u4FF1\u5230\u3002\u4E3B\u8F85\u9879\u5FC5\u987B\u540C\u65F6\u5199\u660E\u201C\u95EE\u9898\u5728\u54EA\u91CC\u201D\u201C\u8C01\u53BB\u505A\u4EC0\u4E48\u201D\u201C\u591A\u4E45\u56DE\u62A5\u201D\u548C\u201C\u73A9\u5BB6\u9700\u88C1\u5B9A\u4EC0\u4E48\u201D\uFF1B\u4E0D\u5F97\u53EA\u5199\u201C\u62BD\u9A8C\u4E09\u8DEF\u201D\u201C\u8C03\u67E5\u5B9E\u51B5\u201D\u7B49\u65E0\u4ECE\u4E0B\u624B\u7684\u516C\u6587\u7F29\u5199\u3002\u4E0D\u5F97\u5199\u201C\u5B9C\u7A33\u59A5\u63A8\u8FDB\u201D\u201C\u914C\u60C5\u529E\u7406\u201D\u201C\u89C6\u60C5\u51B5\u800C\u5B9A\u201D\u7B49\u7A7A\u8BDD\u3002\u94E8\u9009\u5EFA\u8BAE\u53EA\u80FD\u6307\u5411\u5DF2\u6709\u5B98\u7F72\u548C\u5B98\u804C\uFF0C\u4E0D\u5F97\u65B0\u5EFA\u3001\u64A4\u5E76\u6216\u6539\u9020\u653F\u6CBB\u67B6\u6784\uFF1B\u4EFB\u514D\u4EC5\u662F\u5EFA\u8BAE\uFF0C\u7531\u73A9\u5BB6\u5728\u94E8\u9009\u754C\u9762\u4EB2\u81EA\u64CD\u4F5C\u3002\u663E\u793A\u6587\u672C\u603B\u957F\u5EA6\u63A7\u5236\u5728\u4E5D\u767E\u5B57\u4EE5\u5185\u3002\u5C40\u52BF\u7814\u5224\u4F7F\u7528\u6613\u61C2\u767D\u8BDD\uFF0C\u63D0\u7EB2\u4FDD\u7559\u514B\u5236\u7684\u6587\u8A00\u8BED\u611F\uFF0C\u4E0D\u5199\u9A88\u53E5\u3002
 
 \u4E0D\u5F97\u91CD\u590D\u6B64\u524D\u56DE\u5408\u5DF2\u7ECF\u63D0\u51FA\u6216\u9881\u884C\u7684\u5EFA\u8BAE\u65B9\u5411\u3002\u82E5\u540C\u4E00\u4E8B\u52A1\u786E\u987B\u5EF6\u7EED\uFF0C\u5FC5\u987B\u4EE5\u201C\u7EED\u529E\u201D\u5F00\u5934\uFF0C\u5E76\u660E\u786E\u672C\u671F\u65B0\u589E\u7740\u529B\u70B9\uFF0C\u4E0D\u5F97\u539F\u53E5\u91CD\u8FF0\u3002\u5EFA\u8BAE\u5FC5\u987B\u9488\u5BF9\u672C\u671F\u6570\u503C\u77ED\u677F\u4E0E\u56F0\u5883\uFF1B\u58EB\u8BBA\u504F\u4F4E\u65F6\u987B\u8003\u8651\u7F13\u548C\u671D\u8BAE\u6216\u6536\u7A84\u63A8\u884C\u529B\u5EA6\u3002${stage === "\u524D\u671F" ? "\u5F53\u524D\u4E3A\u524D\u671F\uFF0C\u91CD\u5728\u6838\u6E05\u5E95\u6570\u4E0E\u5C0F\u8303\u56F4\u8BD5\u529E\u3002" : stage === "\u4E2D\u671F" ? "\u5F53\u524D\u4E3A\u4E2D\u671F\uFF0C\u91CD\u5728\u63A8\u884C\u3001\u6838\u9A8C\u4E0E\u7EA0\u504F\u3002" : "\u5F53\u524D\u4E3A\u540E\u671F\uFF0C\u91CD\u5728\u5DE9\u56FA\u6210\u679C\u3001\u7ED3\u6E05\u9057\u7559\u4E0E\u5584\u540E\u3002"}\u3010\u6682\u7F13\u3011\u9879\u53EA\u51C6\u8BF4\u660E\u201C\u4E3A\u4F55\u672C\u671F\u4E0D\u505A\u201D\uFF0C\u4E25\u7981\u5199\u4EFB\u4F55\u52A8\u4F5C\u3001\u5BF9\u8C61\u6216\u671F\u9650\u3002
 
@@ -297,12 +373,13 @@ ${formatHistory(state?.history || [])}
 \u53EA\u8FD4\u56DEJSON\uFF1A
 {
   "dimensions":[
-    {"name":"\u8D22\u653F","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
-    {"name":"\u6C11\u751F","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
-    {"name":"\u519B\u4E8B","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
-    {"name":"\u540F\u6CBB","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"}
+    {"name":"\u8D22\u653F","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","decision":"\u4E3B\u8F85\u9879\u7684\u4E8C\u9009\u4E00\u88C1\u5B9A\uFF0C\u6682\u7F13\u9879\u7559\u7A7A","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
+    {"name":"\u6C11\u751F","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","decision":"\u4E3B\u8F85\u9879\u7684\u4E8C\u9009\u4E00\u88C1\u5B9A\uFF0C\u6682\u7F13\u9879\u7559\u7A7A","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
+    {"name":"\u519B\u4E8B","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","decision":"\u4E3B\u8F85\u9879\u7684\u4E8C\u9009\u4E00\u88C1\u5B9A\uFF0C\u6682\u7F13\u9879\u7559\u7A7A","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"},
+    {"name":"\u540F\u6CBB","role":"\u4E3B\u6216\u8F85\u6216\u6682\u7F13","advice":"\u4E00\u6761\u5177\u4F53\u5EFA\u8BAE\u6216\u6682\u7F13\u7406\u7531","decision":"\u4E3B\u8F85\u9879\u7684\u4E8C\u9009\u4E00\u88C1\u5B9A\uFF0C\u6682\u7F13\u9879\u7559\u7A7A","policyId":"\u5BF9\u5E94\u7684\u4E00\u9879\u653F\u52A1ID"}
   ],
-  "personnel":"\u4E00\u53E5\u53EF\u9009\u4EBA\u4E8B\u5EFA\u8BAE\uFF1B\u6CA1\u6709\u5219\u5199\u6682\u65E0\u8C03\u4EFB\u5EFA\u8BAE"
+  "situation":"\u4E09\u81F3\u56DB\u53E5\u767D\u8BDD\u5C40\u52BF\u7814\u5224",
+  "personnel":"\u5BF9\u73B0\u6709\u5B98\u7F72\u548C\u5C97\u4F4D\u7684\u4E00\u6761\u94E8\u9009\u5EFA\u8BAE"
 }`;
   const system = `\u4F60\u662F\u5386\u53F2\u7B56\u7565\u6E38\u620F\u300A\u7199\u5B81\u6289\u62E9\u300B\u7684\u8F85\u653F\u5B98\uFF0C\u4E0D\u662F\u63A8\u6F14\u53F2\u5B98\u3002
 1. \u4F60\u53EA\u80FD\u5728\u9881\u8BCF\u524D\u63D0\u4F9B\u63D0\u7EB2\uFF0C\u4E25\u7981\u751F\u6210\u53EF\u76F4\u63A5\u9881\u884C\u7684\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E0D\u80FD\u58F0\u79F0\u653F\u7B56\u5DF2\u7ECF\u5B9E\u65BD\u3002
@@ -312,14 +389,15 @@ ${formatHistory(state?.history || [])}
 5. \u53EF\u5F15\u7528\u4EBA\u7269\u7ACB\u573A\uFF0C\u4F46\u4E0D\u5F97\u628A\u4EBA\u7269\u7B80\u5355\u5224\u4E3A\u5FE0\u81E3\u6216\u5978\u81E3\u3002
 6. \u5FC5\u987B\u4F18\u5148\u4FDD\u8BC1\u4E3B\u8F85\u4E24\u9879\u5728\u5F53\u524D\u653F\u7565\u3001\u884C\u653F\u4E0E\u56FD\u5E93\u9884\u7B97\u5185\u53EF\u6301\u7EED\u6267\u884C\u3002
 7. \u6BCF\u9879\u53EA\u6709\u4E00\u53E5\u5177\u4F53\u53EF\u6267\u884C\u5EFA\u8BAE\uFF1B\u6682\u7F13\u9879\u53EA\u5199\u6682\u7F13\u7406\u7531\uFF0C\u4E0D\u5F97\u5939\u5E26\u63AA\u65BD\u3002
-8. \u4EBA\u4E8B\u5EFA\u8BAE\u72EC\u7ACB\uFF0C\u4E0D\u8BA1\u5165\u56DB\u7EF4\u4E3B\u8F85\u540D\u989D\uFF1B\u603B\u663E\u793A\u6587\u672C\u4E0D\u5F97\u8D85\u8FC7\u4E8C\u767E\u5B57\u3002
-9. \u8F93\u51FA\u5FC5\u987B\u4E3AJSON\u3002
-10. ${outputLanguageRule}`;
+8. \u5FC5\u987B\u5148\u7528\u6613\u61C2\u767D\u8BDD\u89E3\u91CA\u5C40\u52BF\uFF0C\u4E3B\u8F85\u9879\u5404\u7ED9\u4E00\u4E2A\u9700\u8981\u73A9\u5BB6\u88C1\u5B9A\u7684\u4E8C\u9009\u4E00\u95EE\u9898\uFF1B\u603B\u663E\u793A\u6587\u672C\u4E0D\u5F97\u8D85\u8FC7\u4E5D\u767E\u5B57\u3002
+9. \u94E8\u9009\u5EFA\u8BAE\u4EC5\u80FD\u6539\u6388\u73B0\u6709\u5C97\u4F4D\uFF0C\u4E0D\u5F97\u6539\u9769\u5B98\u5236\u67B6\u6784\uFF0C\u4E5F\u4E0D\u5F97\u81EA\u52A8\u4EFB\u514D\u3002
+10. \u8F93\u51FA\u5FC5\u987B\u4E3AJSON\u3002
+11. ${outputLanguageRule}`;
   const output = await callModel(config, system, prompt, fetchImpl);
   const parsed = parseJsonOutput(output);
   return {
     ok: true,
-    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity, state)
+    advice: normalizeAdvisorOutline(parsed, administrativeRemaining, administrativeCapacity, state, event)
   };
 }
 async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, event, officer, policies, record, history = [], config = {}, fetchImpl = fetch } = {}) {

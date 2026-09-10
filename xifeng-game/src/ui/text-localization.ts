@@ -72,12 +72,22 @@ export function addPlainReactionLead(labelValue: unknown, textValue: unknown): s
 export function localizeAdvisorAdvice(advice: AdvisorAdvice): AdvisorAdvice {
   return {
     outline: localizeDisplayText(advice.outline),
+    situation: localizeDisplayText(advice.situation),
     dimensions: advice.dimensions.map((item) => ({
       ...item,
       scope: localizeDisplayText(item.scope),
       advice: localizeDisplayText(item.advice),
+      decision: item.decision ? localizeDisplayText(item.decision) : undefined,
     })),
     personnel: localizeDisplayText(advice.personnel),
+    personnelRecommendation: advice.personnelRecommendation ? {
+      ...advice.personnelRecommendation,
+      officeName: localizeDisplayText(advice.personnelRecommendation.officeName),
+      postTitle: localizeDisplayText(advice.personnelRecommendation.postTitle),
+      officerName: localizeDisplayText(advice.personnelRecommendation.officerName),
+      reason: localizeDisplayText(advice.personnelRecommendation.reason),
+      risk: localizeDisplayText(advice.personnelRecommendation.risk),
+    } : undefined,
     policyIds: advice.policyIds ?? [],
   };
 }

@@ -63,8 +63,10 @@ describe('AI史实推理边界', () => {
       personnel: '命曾布专核三司账案',
     }));
     const result = await adviseWithAI({ question: '该如何处置？', state: { resources: { administration: 32 } }, config, fetchImpl });
-    expect(result.advice.outline).toMatch(/^行政余量:32\/50\n\n财政\|\(国库与岁入\)【主】/);
-    expect(result.advice.outline).toContain('\n人事:命曾布专核三司账案。');
+    expect(result.advice.outline).toContain('局势研判:');
+    expect(result.advice.outline).toMatch(/行政余量:32\/50\n\n财政\|\(国库与岁入\)【主】/);
+    expect(result.advice.outline).toContain('\n铨选建议:命曾布专核三司账案。');
+    expect(result.advice.outline).toContain('须裁定：');
     expect(result.advice.outline).not.toMatch(/制曰|奉诏|钦此|辅政草诏/);
     expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
@@ -109,7 +111,10 @@ describe('AI史实推理边界', () => {
     const prompt = requestBody.messages.map((message) => message.content).join('\n');
     expect(prompt).toContain('四个维度必须全部列出，顺序固定为财政、民生、军事、吏治');
     expect(prompt).toContain('【主】和【辅】各且仅出现一次');
-    expect(prompt).toContain('每个维度最多一条建议，严禁面面俱到');
+    expect(prompt).toContain('每个维度最多一条施政建议，严禁面面俱到');
+    expect(prompt).toContain('当前固定官署与任职');
+    expect(prompt).toContain('玩家需裁定什么');
+    expect(prompt).toContain('不得改设机构');
     expect(prompt).toContain('至少保留 12 点政略、10 点行政和 800 万贯国库');
     expect(prompt).toContain('当前国策成果');
     expect(prompt).toContain('对勘官署账簿');
@@ -138,16 +143,18 @@ describe('AI史实推理边界', () => {
       fetchImpl,
     });
 
-    const lines = result.advice.outline.split('\n').filter(Boolean);
-    expect(lines.map((line) => line.split('|')[0])).toEqual(['行政余量:27/50', '财政', '民生', '军事', '吏治', '人事:暂无调任建议。']);
+    const dimensionLines = result.advice.outline.split('\n').filter((line) => /^(?:财政|民生|军事|吏治)\|/.test(line));
+    expect(dimensionLines.map((line) => line.split('|')[0])).toEqual(['财政', '民生', '军事', '吏治']);
+    expect(result.advice.outline).toContain('局势研判:');
+    expect(result.advice.outline).toContain('铨选建议:');
     expect(result.advice.outline.match(/【主】/g)).toHaveLength(1);
     expect(result.advice.outline.match(/【辅】/g)).toHaveLength(1);
     expect(result.advice.outline.match(/【暂缓】/g)).toHaveLength(2);
     expect(result.advice.outline).not.toMatch(/宜稳妥推进|视情况而定/);
-    expect(result.advice.outline.length).toBeLessThanOrEqual(200);
+    expect(result.advice.outline.length).toBeLessThanOrEqual(900);
   });
 
-  it('连续五次参详都保持四维、一主一辅与二百字上限', async () => {
+  it('连续五次参详都保持四维、一主一辅与九百字上限', async () => {
     let call = 0;
     const roles = [
       ['主', '辅', '暂缓', '暂缓'],
@@ -176,7 +183,7 @@ describe('AI史实推理边界', () => {
       expect(advice.dimensions.filter((item) => item.role === '辅')).toHaveLength(1);
       expect(advice.dimensions.filter((item) => item.role === '暂缓')).toHaveLength(2);
       expect(advice.outline).toContain(`行政余量:${40 - index}/50`);
-      expect(advice.outline.length).toBeLessThanOrEqual(200);
+      expect(advice.outline.length).toBeLessThanOrEqual(900);
     }
   });
 
