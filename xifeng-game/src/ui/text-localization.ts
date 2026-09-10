@@ -53,19 +53,20 @@ export function localizeDisplayText(value: unknown): string {
 }
 
 const plainReactionLeads: Record<string, string> = {
-  朝议: '直白说，朝臣最关心新法会不会失控。',
-  三司: '直白说，三司先看钱从哪里来、够不够花。',
-  台谏: '直白说，台谏最怕政令扰民又无人负责。',
-  州县: '直白说，州县在意人手和期限能否撑住。',
-  豪强: '直白说，地方豪强会先算自己损失多少。',
-  百姓: '直白说，百姓只看负担是否真的减轻。',
+  朝议: '朝臣最关心新法会不会失控。',
+  三司: '三司先看钱从哪里来、够不够花。',
+  台谏: '台谏最怕政令扰民又无人担责。',
+  州县: '州县在意人手和期限能否撑住。',
+  豪强: '地方豪强先算自己损失多少。',
+  百姓: '百姓只看负担是否真的减轻。',
 };
 
 export function addPlainReactionLead(labelValue: unknown, textValue: unknown): string {
   const label = localizeDisplayText(labelValue);
-  const text = localizeDisplayText(textValue);
-  if (/^(直白说|简单说|说白了)，/.test(text)) return text;
-  return `${plainReactionLeads[label] ?? `直白说，${label}先看这道政令如何影响自身。`}${text}`;
+  const text = localizeDisplayText(textValue).replace(/^(?:直白说|简单说|说白了)[，,:：]?\s*/, '');
+  const lead = plainReactionLeads[label] ?? `${label}先看这道政令如何影响自身。`;
+  if (text.startsWith(lead)) return text;
+  return `${lead}${text}`;
 }
 
 export function localizeAdvisorAdvice(advice: AdvisorAdvice): AdvisorAdvice {

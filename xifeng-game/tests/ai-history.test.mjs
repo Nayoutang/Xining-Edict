@@ -132,8 +132,9 @@ describe('AI史实推理边界', () => {
     }));
     const result = await narrateSettlementWithAI({ edict: '核查财计', config, fetchImpl });
 
-    expect(result.narrative.reactions[0].text).toMatch(/^直白说，三司先看钱从哪里来、够不够花。/);
-    expect(result.narrative.reactions[1].text).toMatch(/^直白说，百姓只看负担是否真的减轻。/);
+    expect(result.narrative.reactions[0].text).toMatch(/^三司先看钱从哪里来、够不够花。/);
+    expect(result.narrative.reactions[1].text).toMatch(/^百姓只看负担是否真的减轻。/);
+    expect(result.narrative.reactions.map((item) => item.text).join('')).not.toMatch(/直白说|简单说|说白了/);
   });
 
   it('辅政官输出中的内部字段和ID统一转换为中文', async () => {

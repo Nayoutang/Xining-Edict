@@ -69,18 +69,18 @@ function localizeInternalTerms(value) {
 }
 
 const plainReactionLeads = new Map([
-  ['朝议', '直白说，朝臣最关心新法会不会失控。'],
-  ['三司', '直白说，三司先看钱从哪里来、够不够花。'],
-  ['台谏', '直白说，台谏最怕政令扰民又无人负责。'],
-  ['州县', '直白说，州县在意人手和期限能否撑住。'],
-  ['豪强', '直白说，地方豪强会先算自己损失多少。'],
-  ['百姓', '直白说，百姓只看负担是否真的减轻。'],
+  ['朝议', '朝臣最关心新法会不会失控。'],
+  ['三司', '三司先看钱从哪里来、够不够花。'],
+  ['台谏', '台谏最怕政令扰民又无人担责。'],
+  ['州县', '州县在意人手和期限能否撑住。'],
+  ['豪强', '地方豪强先算自己损失多少。'],
+  ['百姓', '百姓只看负担是否真的减轻。'],
 ]);
 
 function addPlainReactionLead(label, value) {
-  const text = localizeInternalTerms(value);
-  if (/^(直白说|简单说|说白了)，/.test(text)) return text;
-  const lead = plainReactionLeads.get(label) || `直白说，${label}先看这道政令如何影响自身。`;
+  const text = localizeInternalTerms(value).replace(/^(?:直白说|简单说|说白了)[，,:：]?\s*/, '');
+  const lead = plainReactionLeads.get(label) || `${label}先看这道政令如何影响自身。`;
+  if (text.startsWith(lead)) return text;
   return `${lead}${text}`;
 }
 
@@ -224,7 +224,7 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
 
 你的任务不是再次计算输赢，而是解释这些既定变化如何在北宋国家机器中发生。必须体现诏令由御前发出后，经过中书门下、三司或枢密院、监司、州县和胥吏的传递与变形；结合执行官的性格、行事方式、政治底线和语言风格。官员之间存在制度判断与利益冲突，不得写成忠臣与奸臣的简单对立。
 
-每条各方回奏的 text 第一行必须先用一句不超过二十二字的现代白话说清“这对该方意味着什么”，再接制度细节；不要一上来就写公文腔。
+每条各方回奏的 text 第一行必须先用一句不超过二十二字的现代白话直接说清“这对该方意味着什么”，再接制度细节；不得使用“直白说”“简单说”“说白了”等引导词，也不要一上来就写公文腔。
 
 只返回JSON，不得附加Markdown：
 {
