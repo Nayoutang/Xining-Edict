@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArchiveRestore, BookOpenText, CircleDollarSign, Landmark, LibraryBig, LoaderCircle, RotateCcw, Save, Scale, ScrollText, Search, Shield, Trash2, Users, X } from 'lucide-react';
-import { appointCourtOfficer, createInitialState, dismissCourtOfficer, historicalEvents, isAdvisorOutline, isCourtOfficerAppointed, officers, officerTagLabels, parseEdict, policies, settleTurn } from '..';
+import { appointCourtOfficer, createInitialState, dismissCourtOfficer, historicalEvents, isCourtOfficerAppointed, officers, officerTagLabels, parseEdict, policies, settleTurn } from '..';
 import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, providerDefaults, testAIConnectionRemote } from '../ai/client';
 import type { AdvisorAdvice, AIConfig, CourtOfficeKey, CourtPostKey, DilemmaProgress, EdictInterpretation, GameState, HistoricalEvent, HistoricalNarrative, IndicatorKey, Officer, TurnRecord } from '..';
 import { GameScreen } from './GameScreen';
@@ -76,17 +76,10 @@ export function App() {
     setEdictText(text);
     setInterpretation(null);
     setPolicyIds([]);
-    setError(isAdvisorOutline(text) ? '辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。' : '');
+    setError('');
   }
 
   async function interpretEdict(showBusy = true) {
-    if (isAdvisorOutline(edictText)) {
-      const parsed = parseEdict(edictText);
-      setInterpretation(parsed);
-      setPolicyIds([]);
-      setError(parsed.warnings[0] ?? '辅政官提纲不能直接作为诏书。');
-      return parsed;
-    }
     if (showBusy) setAIBusy('推演模型正在理解诏书');
     let parsed: EdictInterpretation;
     try {
@@ -141,10 +134,6 @@ export function App() {
   }
 
   async function issueEdict() {
-    if (isAdvisorOutline(edictText)) {
-      setError('辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。');
-      return;
-    }
     setAIBusy('正在拟旨、用玺并推演半年施政');
     try {
       const parsed = await interpretEdict(false);
@@ -200,7 +189,7 @@ export function App() {
             />
           </div>
           {error && <strong className="panel-error">{error}</strong>}
-          <button className="seal-action panel-seal" type="button" onClick={issueEdict} disabled={state.ended || !edictText.trim() || isAdvisorOutline(edictText)}><span>用玺</span><small>颁行诏令</small></button>
+          <button className="seal-action panel-seal" type="button" onClick={issueEdict} disabled={state.ended || !edictText.trim()}><span>用玺</span><small>颁行诏令</small></button>
         </div>
       </div>}
     </Drawer>}

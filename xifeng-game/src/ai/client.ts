@@ -1,4 +1,4 @@
-import type { EdictInterpretation } from './edict-parser';
+import { isAdvisorOutline, parseEdict, type EdictInterpretation } from './edict-parser';
 import type { GameState, HistoricalEvent, Officer, Policy, TurnRecord } from '../game/types';
 
 export interface AIConfig {
@@ -120,6 +120,7 @@ export const providerDefaults: Record<AIConfig['provider'], Omit<AIConfig, 'prov
 };
 
 export async function interpretEdictRemote(edict: string, context: unknown, config: AIConfig): Promise<EdictInterpretation> {
+  if (isAdvisorOutline(edict)) return parseEdict(edict);
   const response = await fetch(apiUrl('/api/interpret'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ edict, context, config }),

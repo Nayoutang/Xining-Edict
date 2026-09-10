@@ -21,11 +21,15 @@ const policyPatterns: Array<{ policyId: string; patterns: RegExp[] }> = [
   { policyId: 'discipline-corrupt-officials', patterns: [/黜.*奸/, /罢免.*贪/, /追赃/, /惩治.*贪/, /依法.*黜/, /驱逐.*奸/] },
 ];
 
+const outlineDimensionDefaults: Record<string, string> = {
+  财政: 'cross-check-ledgers',
+  民生: 'curb-local-exactions',
+  军事: 'northwest-defense',
+  吏治: 'curb-local-exactions',
+};
+
 export function isAdvisorOutline(text: string): boolean {
-  const normalized = text.replace(/\r/g, '');
-  const dimensionLines = normalized.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) ?? [];
-  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(normalized);
-  return dimensionLines.length >= 3 || (hasCapacity && dimensionLines.length >= 2);
+  return text.split(/\r?\n/).filter((line) => /^(?:财政|民生|军事|吏治)\s*\|/.test(line.trim())).length >= 2;
 }
 
 export function parseEdict(text: string): EdictInterpretation {
@@ -33,22 +37,23 @@ export function parseEdict(text: string): EdictInterpretation {
   if (!sourceText) {
     return { sourceText, policyIds: [], officerId: null, summary: '', warnings: ['诏书尚未落笔。'] };
   }
-  if (isAdvisorOutline(sourceText)) {
-    return {
-      sourceText,
-      policyIds: [],
-      officerId: null,
-      summary: '',
-      warnings: ['辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。'],
-    };
-  }
-
+  const outlineLines = sourceText.split(/\r?\n/).filter((line) => /^(?:财政|民生|军事|吏治)\s*\|/.test(line.trim()));
+  const activeOutlineLines = outlineLines.filter((line) => /【(?:主|辅)】/.test(line));
+  const policySource = outlineLines.length >= 2 ? activeOutlineLines.join('\n') : sourceText;
   const matches = policyPatterns
-    .map(({ policyId, patterns }) => ({ policyId, score: patterns.filter((pattern) => pattern.test(sourceText)).length }))
+    .map(({ policyId, patterns }) => ({ policyId, score: patterns.filter((pattern) => pattern.test(policySource)).length }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score);
   const warnings: string[] = [];
   const policyIds = matches.map(({ policyId }) => policyId);
+  if (outlineLines.length >= 2) {
+    for (const line of activeOutlineLines) {
+      const dimension = line.trim().match(/^(财政|民生|军事|吏治)/)?.[1];
+      const lineHasPolicy = policyPatterns.some(({ patterns }) => patterns.some((pattern) => pattern.test(line)));
+      const fallbackId = dimension ? outlineDimensionDefaults[dimension] : undefined;
+      if (!lineHasPolicy && fallbackId && !policyIds.includes(fallbackId)) policyIds.push(fallbackId);
+    }
+  }
   const officer = officers.find((item) => sourceText.includes(item.name)) ?? null;
   if (!policyIds.length) {
     policyIds.push('open-ended-directive');

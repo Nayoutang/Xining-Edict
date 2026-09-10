@@ -84,13 +84,6 @@ function addPlainReactionLead(label, value) {
   return `${lead}${text}`;
 }
 
-function looksLikeAdvisorOutline(value) {
-  const text = String(value || '').replace(/\r/g, '');
-  const dimensionLines = text.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) || [];
-  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(text);
-  return dimensionLines.length >= 3 || (hasCapacity && dimensionLines.length >= 2);
-}
-
 const advisorDimensions = [
   {
     name: '财政', scope: '国库与岁入', policyId: 'cross-check-ledgers', indicator: 'finance',
@@ -203,18 +196,10 @@ const outputLanguageRule = `输入中的英文键名和连字符ID都是程序�
 
 export async function interpretEdictWithAI({ edict, context = {}, config = {}, fetchImpl = fetch } = {}) {
   const sourceEdict = String(edict || '').trim();
-  if (looksLikeAdvisorOutline(sourceEdict)) {
-    return {
-      ok: true,
-      interpretation: {
-        sourceText: sourceEdict,
-        policyIds: [],
-        officerId: null,
-        summary: '',
-        warnings: ['辅政官提纲不能直接作为诏书；请据主辅取舍亲自写明对象、措施与期限。'],
-      },
-    };
-  }
+  const outlineLines = sourceEdict.split(/\r?\n/).filter((line) => /^(?:财政|民生|军事|吏治)\s*\|/.test(line.trim()));
+  const edictForInterpretation = outlineLines.length >= 2
+    ? outlineLines.filter((line) => /【(?:主|辅)】/.test(line)).join('\n')
+    : sourceEdict;
   const prompt = `你是北宋熙宁变法策略游戏的中书舍人。将玩家自由诏书映射为全部相关的游戏规则政务，不设置人为数量上限；一份诏书可以同时涉及财政、民生、军事、任免、制度和地方治理。不得创造ID，不得修改数值，执行能力不足由程序结算为行政超载。
 
 允许的政务：
@@ -224,7 +209,9 @@ ${allowedPolicies.map(([id, name]) => `- ${id}: ${name}`).join('\n')}
 ${allowedOfficers.map(([id, name]) => `- ${id}: ${name}`).join('\n')}
 
 当前背景：${JSON.stringify(context)}
-玩家诏书：${String(edict || '').trim()}
+玩家诏书：${edictForInterpretation}
+
+若输入来自辅政官提纲，只解析【主】与【辅】两行，严禁把【暂缓】行映射为政务。
 
 只返回JSON：{"policyIds":["id"],"officerId":"id或null","summary":"中书如何理解诏意","warnings":["需要玩家注意之处"]}`;
   const output = await callModel(config, `你只做受史实与规则约束的政令解析，并严格返回JSON。\n${outputLanguageRule}`, prompt, fetchImpl);
@@ -232,12 +219,12 @@ ${allowedOfficers.map(([id, name]) => `- ${id}: ${name}`).join('\n')}
   const policyIds = Array.isArray(parsed.policyIds)
     ? [...new Set(parsed.policyIds.filter((id) => allowedPolicies.some(([allowed]) => allowed === id)))]
     : [];
-  if (!policyIds.length && String(edict || '').trim()) policyIds.push('open-ended-directive');
+  if (!policyIds.length && sourceEdict) policyIds.push('open-ended-directive');
   const officerId = allowedOfficers.some(([id]) => id === parsed.officerId) ? parsed.officerId : null;
   return {
     ok: true,
     interpretation: {
-      sourceText: String(edict || '').trim(),
+      sourceText: sourceEdict,
       policyIds,
       officerId,
       summary: localizeInternalTerms(parsed.summary),

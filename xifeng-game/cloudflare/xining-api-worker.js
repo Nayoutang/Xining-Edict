@@ -97,12 +97,6 @@ function addPlainReactionLead(label, value) {
   if (text.startsWith(lead)) return text;
   return `${lead}${text}`;
 }
-function looksLikeAdvisorOutline(value) {
-  const text = String(value || "").replace(/\r/g, "");
-  const dimensionLines = text.match(/(?:^|\n)\s*(?:财政|民生|军事|吏治)\s*\|\s*[（(][^）)]+[）)]\s*【(?:主|辅|暂缓)】/g) || [];
-  const hasCapacity = /行政余量\s*[:：]\s*\d+\s*\/\s*\d+/.test(text);
-  return dimensionLines.length >= 3 || hasCapacity && dimensionLines.length >= 2;
-}
 var advisorDimensions = [
   {
     name: "\u8D22\u653F",
@@ -212,18 +206,8 @@ var outputLanguageRule = `\u8F93\u5165\u4E2D\u7684\u82F1\u6587\u952E\u540D\u548C
 \u5FC5\u987B\u4F7F\u7528\u4E2D\u6587\u79F0\u547C\uFF1Atreasury=\u56FD\u5E93\uFF0CpoliticalCapital=\u653F\u7565\uFF0Cadministration=\u884C\u653F\uFF0Cfinance=\u8D22\u7528\uFF0Clivelihood=\u6C11\u751F\uFF0Cdefense=\u8FB9\u5907\uFF0CcourtSupport=\u58EB\u8BBA\uFF0Cexecution=\u6267\u884C\uFF0Cseverity=\u4E25\u91CD\u5EA6\u3002\u4E0D\u8981\u8F93\u51FA\u7C7B\u4F3C courtSupport-3\u3001severity66\u3001executionBonus+2 \u7684\u8C03\u8BD5\u5F0F\u8868\u8FBE\u3002`;
 async function interpretEdictWithAI({ edict, context = {}, config = {}, fetchImpl = fetch } = {}) {
   const sourceEdict = String(edict || "").trim();
-  if (looksLikeAdvisorOutline(sourceEdict)) {
-    return {
-      ok: true,
-      interpretation: {
-        sourceText: sourceEdict,
-        policyIds: [],
-        officerId: null,
-        summary: "",
-        warnings: ["\u8F85\u653F\u5B98\u63D0\u7EB2\u4E0D\u80FD\u76F4\u63A5\u4F5C\u4E3A\u8BCF\u4E66\uFF1B\u8BF7\u636E\u4E3B\u8F85\u53D6\u820D\u4EB2\u81EA\u5199\u660E\u5BF9\u8C61\u3001\u63AA\u65BD\u4E0E\u671F\u9650\u3002"]
-      }
-    };
-  }
+  const outlineLines = sourceEdict.split(/\r?\n/).filter((line) => /^(?:财政|民生|军事|吏治)\s*\|/.test(line.trim()));
+  const edictForInterpretation = outlineLines.length >= 2 ? outlineLines.filter((line) => /【(?:主|辅)】/.test(line)).join("\n") : sourceEdict;
   const prompt = `\u4F60\u662F\u5317\u5B8B\u7199\u5B81\u53D8\u6CD5\u7B56\u7565\u6E38\u620F\u7684\u4E2D\u4E66\u820D\u4EBA\u3002\u5C06\u73A9\u5BB6\u81EA\u7531\u8BCF\u4E66\u6620\u5C04\u4E3A\u5168\u90E8\u76F8\u5173\u7684\u6E38\u620F\u89C4\u5219\u653F\u52A1\uFF0C\u4E0D\u8BBE\u7F6E\u4EBA\u4E3A\u6570\u91CF\u4E0A\u9650\uFF1B\u4E00\u4EFD\u8BCF\u4E66\u53EF\u4EE5\u540C\u65F6\u6D89\u53CA\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u4EFB\u514D\u3001\u5236\u5EA6\u548C\u5730\u65B9\u6CBB\u7406\u3002\u4E0D\u5F97\u521B\u9020ID\uFF0C\u4E0D\u5F97\u4FEE\u6539\u6570\u503C\uFF0C\u6267\u884C\u80FD\u529B\u4E0D\u8DB3\u7531\u7A0B\u5E8F\u7ED3\u7B97\u4E3A\u884C\u653F\u8D85\u8F7D\u3002
 
 \u5141\u8BB8\u7684\u653F\u52A1\uFF1A
@@ -233,19 +217,21 @@ ${allowedPolicies.map(([id, name]) => `- ${id}: ${name}`).join("\n")}
 ${allowedOfficers.map(([id, name]) => `- ${id}: ${name}`).join("\n")}
 
 \u5F53\u524D\u80CC\u666F\uFF1A${JSON.stringify(context)}
-\u73A9\u5BB6\u8BCF\u4E66\uFF1A${String(edict || "").trim()}
+\u73A9\u5BB6\u8BCF\u4E66\uFF1A${edictForInterpretation}
+
+\u82E5\u8F93\u5165\u6765\u81EA\u8F85\u653F\u5B98\u63D0\u7EB2\uFF0C\u53EA\u89E3\u6790\u3010\u4E3B\u3011\u4E0E\u3010\u8F85\u3011\u4E24\u884C\uFF0C\u4E25\u7981\u628A\u3010\u6682\u7F13\u3011\u884C\u6620\u5C04\u4E3A\u653F\u52A1\u3002
 
 \u53EA\u8FD4\u56DEJSON\uFF1A{"policyIds":["id"],"officerId":"id\u6216null","summary":"\u4E2D\u4E66\u5982\u4F55\u7406\u89E3\u8BCF\u610F","warnings":["\u9700\u8981\u73A9\u5BB6\u6CE8\u610F\u4E4B\u5904"]}`;
   const output = await callModel(config, `\u4F60\u53EA\u505A\u53D7\u53F2\u5B9E\u4E0E\u89C4\u5219\u7EA6\u675F\u7684\u653F\u4EE4\u89E3\u6790\uFF0C\u5E76\u4E25\u683C\u8FD4\u56DEJSON\u3002
 ${outputLanguageRule}`, prompt, fetchImpl);
   const parsed = parseJsonOutput(output);
   const policyIds = Array.isArray(parsed.policyIds) ? [...new Set(parsed.policyIds.filter((id) => allowedPolicies.some(([allowed]) => allowed === id)))] : [];
-  if (!policyIds.length && String(edict || "").trim()) policyIds.push("open-ended-directive");
+  if (!policyIds.length && sourceEdict) policyIds.push("open-ended-directive");
   const officerId = allowedOfficers.some(([id]) => id === parsed.officerId) ? parsed.officerId : null;
   return {
     ok: true,
     interpretation: {
-      sourceText: String(edict || "").trim(),
+      sourceText: sourceEdict,
       policyIds,
       officerId,
       summary: localizeInternalTerms(parsed.summary),

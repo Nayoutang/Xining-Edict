@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAdvisorOutline, parseEdict } from '../src';
+import { parseEdict } from '../src';
 
 describe('自由诏书解析', () => {
   it('从自然语言中识别多项政务和执行官', () => {
@@ -37,7 +37,7 @@ describe('自由诏书解析', () => {
     expect(result.policyIds).toEqual(['curb-local-exactions', 'cross-check-ledgers']);
   });
 
-  it('拦截直接粘贴的辅政官提纲', () => {
+  it('允许直接粘贴辅政官提纲并解析其中的政务', () => {
     const outline = `行政余量:37/50
 
 财政|(国库与岁入)【主】核清三司岁入底数，旬末具报。
@@ -47,14 +47,14 @@ describe('自由诏书解析', () => {
 
 人事:暂无调任建议。`;
 
-    expect(isAdvisorOutline(outline)).toBe(true);
-    expect(parseEdict(outline)).toMatchObject({ policyIds: [], officerId: null, summary: '' });
-    expect(parseEdict(outline).warnings[0]).toContain('不能直接作为诏书');
+    const result = parseEdict(outline);
+    expect(result.policyIds).toContain('cross-check-ledgers');
+    expect(result.policyIds).toContain('curb-local-exactions');
+    expect(result.policyIds).not.toContain('northwest-defense');
   });
 
   it('正常据提纲改写的诏书仍可提交并匹配财政与吏治', () => {
     const result = parseEdict('命曾布于一月内对勘三司账簿，并令监司抽验京东州县奉行实况，逐件复奏。');
-    expect(isAdvisorOutline(result.sourceText)).toBe(false);
     expect(result.policyIds).toContain('cross-check-ledgers');
     expect(result.policyIds).toContain('curb-local-exactions');
     expect(result.officerId).toBe('zeng-bu');

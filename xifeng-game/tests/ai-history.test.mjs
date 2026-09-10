@@ -69,16 +69,20 @@ describe('AI史实推理边界', () => {
     expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
-  it('服务端在调用模型前拦截直接粘贴的参详提纲', async () => {
-    const fetchImpl = vi.fn();
-    const result = await interpretEdictWithAI({
-      edict: '行政余量:40/50\n\n财政|(国库与岁入)【主】核清账簿。\n民生|(百姓负担)【辅】核定实负。\n军事|(边备与军储)【暂缓】边警尚缓。\n吏治|(诏令能否落到州县)【暂缓】有司方忙。',
-      config,
-      fetchImpl,
+  it('允许直接提交参详提纲，但服务端只解析主辅两项', async () => {
+    let requestBody;
+    const fetchImpl = vi.fn(async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return mockResponse({ policyIds: ['cross-check-ledgers', 'curb-local-exactions'], officerId: null, summary: '主辅并行', warnings: [] });
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
-    expect(result.interpretation.policyIds).toEqual([]);
-    expect(result.interpretation.warnings[0]).toContain('不能直接作为诏书');
+    const result = await interpretEdictWithAI({
+      edict: '行政余量:40/50\n财政|(国库与岁入)【主】核清账簿。\n民生|(百姓负担)【辅】核定实负。\n军事|(边备与军储)【暂缓】边警尚缓。\n吏治|(诏令能否落到州县)【暂缓】有司方忙。',
+      config, fetchImpl,
+    });
+    const prompt = requestBody.messages.map((message) => message.content).join('\n');
+    expect(prompt).not.toContain('军事|(边备与军储)【暂缓】');
+    expect(prompt).not.toContain('吏治|(诏令能否落到州县)【暂缓】');
+    expect(result.interpretation.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
   it('辅政官收到政务成本并被要求保持一主一辅的可持续预算', async () => {
