@@ -35,6 +35,7 @@ const formatGameDate = (date: GameState['date']) => `熙宁${numerals[date.reign
 const formatDate = (state: GameState) => formatGameDate(state.date);
 const effectText = (changes: Partial<Record<IndicatorKey, number>>) => Object.entries(changes).map(([key, value]) => `${indicatorMeta[key as IndicatorKey].label} ${Number(value) > 0 ? '+' : ''}${value}`);
 const emptyAIConfig: AIConfig = { provider: 'deepseek', apiKey: '', ...providerDefaults.deepseek };
+const defaultAdvisorQuestion = '请按财政、民生、军事、吏治列出一主一辅的施政提纲。';
 
 function readAIConfig(key: string): AIConfig {
   try {
@@ -63,6 +64,8 @@ export function App() {
   const [error, setError] = useState('');
   const [inferenceConfig, setInferenceConfig] = useState(() => readAIConfig('xifeng-ai-config'));
   const [aiBusy, setAIBusy] = useState('');
+  const [advisorQuestion, setAdvisorQuestion] = useState(defaultAdvisorQuestion);
+  const [advisorAdvice, setAdvisorAdvice] = useState<AdvisorAdvice | null>(null);
   const bgmRef = useRef<HTMLAudioElement>(null);
   const advisorConfig: AIConfig = { ...inferenceConfig };
   const event = historicalEvents.find((item) => item.turn === state.turn) ?? historicalEvents.at(-1)!;
@@ -144,6 +147,8 @@ export function App() {
       setPolicyIds([]);
       setEdictText('');
       setInterpretation(null);
+      setAdvisorQuestion(defaultAdvisorQuestion);
+      setAdvisorAdvice(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '本回合无法结算。');
     }
@@ -163,6 +168,7 @@ export function App() {
   function restart() {
     setState(createInitialState()); setPolicyIds([]); setEdictText(''); setInterpretation(null); setOfficerId(officers[0]?.id ?? '');
     setDilemmaBaseline(null); setFocusedDilemmaId(null); setPanel(null); setResult(null); setError('');
+    setAdvisorQuestion(defaultAdvisorQuestion); setAdvisorAdvice(null);
   }
 
   return <main className="game-root">
@@ -184,13 +190,14 @@ export function App() {
       {panel === 'court' && <CourtAppointments state={state} onAppoint={(officeKey, postKey, appointeeId) => setState((current) => appointCourtOfficer(current, officeKey, postKey, appointeeId))} onDismiss={(officeKey, postKey) => setState((current) => dismissCourtOfficer(current, officeKey, postKey))} />}
       {panel === 'archive' && <OfficerArchive selectedOfficerId={officerId} onAppoint={(id) => { setOfficerId(id); setArchiveReturnsToEdict(false); setPanel('edict'); }} />}
       {panel === 'records' && <Records state={state} />}
-      {panel === 'saves' && <SaveArchive state={state} officerId={officerId} onLoad={(savedState, savedOfficerId) => {
+      {panel === 'saves' && <SaveArchive state={state} officerId={officerId} advisorAdvice={advisorAdvice} advisorQuestion={advisorQuestion} onLoad={(savedState, savedOfficerId, savedAdvisorAdvice, savedAdvisorQuestion) => {
         setState(savedState); setOfficerId(savedOfficerId); setPolicyIds([]); setEdictText('');
+        setAdvisorAdvice(savedAdvisorAdvice); setAdvisorQuestion(savedAdvisorQuestion);
         setInterpretation(null); setDilemmaBaseline(null); setFocusedDilemmaId(null); setResult(null); setError(''); setPanel(null);
       }} />}
       {panel === 'edict' && <div className="edict-stage">
         <div className="edict-advisor-column">
-          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} setBusy={setAIBusy} onAdvice={(nextAdvice) => setState((current) => ({ ...current, advisorHistory: [...(current.advisorHistory ?? []), nextAdvice.outline].slice(-6) }))} />
+          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} setBusy={setAIBusy} question={advisorQuestion} onQuestionChange={setAdvisorQuestion} advice={advisorAdvice} onAdvice={(nextAdvice) => { setAdvisorAdvice(nextAdvice); setState((current) => ({ ...current, advisorHistory: [...(current.advisorHistory ?? []), nextAdvice.outline].slice(-6) })); }} />
         </div>
         <div className="edict-workspace">
           <div className="edict-composer">
@@ -578,9 +585,7 @@ function Records({ state }: { state: GameState }) {
   </div>;
 }
 
-function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy, onAdvice }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; setBusy: (text: string) => void; onAdvice: (advice: AdvisorAdvice) => void }) {
-  const [question, setQuestion] = useState('请按财政、民生、军事、吏治列出一主一辅的施政提纲。');
-  const [advice, setAdvice] = useState<AdvisorAdvice | null>(null);
+function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy, question, onQuestionChange, advice, onAdvice }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; setBusy: (text: string) => void; question: string; onQuestionChange: (value: string) => void; advice: AdvisorAdvice | null; onAdvice: (advice: AdvisorAdvice) => void }) {
   const [advisorError, setAdvisorError] = useState('');
 
   async function consult() {
@@ -588,7 +593,6 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
     setBusy('辅政官正在参详天下格局');
     try {
       const nextAdvice = localizeAdvisorAdvice(await consultAdvisorRemote({ question, currentEdict, state, event, officer, policies, config }));
-      setAdvice(nextAdvice);
       onAdvice(nextAdvice);
     } catch (caught) {
       setAdvisorError(caught instanceof Error ? caught.message : '辅政官未能完成参详。');
@@ -600,10 +604,10 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
   return <section className="advisor-workspace">
     <header><div><span>颁诏前咨询 · 御前参详</span><h3>{advice ? '格局判断' : '辅政官'}</h3></div><small>{config.model}</small></header>
     <p>{advice ? '辅政官已据当前国势、余量与官署人事列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官会先说明当前局势，再列施政取舍与铨选建议；诏书正文仍由陛下裁定。'}</p>
-    <div className="advisor-question"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
+    <div className="advisor-question"><textarea value={question} onChange={(e) => onQuestionChange(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
     {advice && <>
-      <div className="advisor-answer"><div className="advisor-draft"><h4>参详提纲</h4><pre>{advice.outline}</pre></div></div>
+      <div className="advisor-answer"><div className="advisor-draft"><h4>参详提纲</h4><pre onCopy={(event) => event.preventDefault()} onCut={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>{advice.outline}</pre></div></div>
       <button className="advisor-adopt" type="button" disabled>请据提纲自行拟诏</button>
     </>}
   </section>;
@@ -614,6 +618,8 @@ interface StoredGame {
   savedAt: string;
   state: GameState;
   officerId: string;
+  advisorAdvice?: AdvisorAdvice | null;
+  advisorQuestion?: string;
 }
 
 const saveSlotKey = (slot: number) => `xifeng-save-slot-${slot}`;
@@ -627,13 +633,13 @@ function readSaveSlot(slot: number): StoredGame | null {
   }
 }
 
-function SaveArchive({ state, officerId, onLoad }: { state: GameState; officerId: string; onLoad: (state: GameState, officerId: string) => void }) {
+function SaveArchive({ state, officerId, advisorAdvice, advisorQuestion, onLoad }: { state: GameState; officerId: string; advisorAdvice: AdvisorAdvice | null; advisorQuestion: string; onLoad: (state: GameState, officerId: string, advisorAdvice: AdvisorAdvice | null, advisorQuestion: string) => void }) {
   const [revision, setRevision] = useState(0);
   const [notice, setNotice] = useState('');
   const slots = useMemo(() => [1, 2, 3].map((slot) => ({ slot, saved: readSaveSlot(slot) })), [revision]);
 
   const writeSlot = (slot: number) => {
-    const saved: StoredGame = { version: 1, savedAt: new Date().toISOString(), state: structuredClone(state), officerId };
+    const saved: StoredGame = { version: 1, savedAt: new Date().toISOString(), state: structuredClone(state), officerId, advisorAdvice: advisorAdvice ? structuredClone(advisorAdvice) : null, advisorQuestion };
     localStorage.setItem(saveSlotKey(slot), JSON.stringify(saved));
     setRevision((value) => value + 1);
     setNotice(`存档 ${slot} 已写入。`);
@@ -659,7 +665,7 @@ function SaveArchive({ state, officerId, onLoad }: { state: GameState; officerId
           <small>{new Date(saved.savedAt).toLocaleString('zh-CN', { hour12: false })}</small>
         </div> : <div className="save-slot-copy"><span>尚未封存</span><h4>空白卷宗</h4><p>可将当前进度写入此处。</p></div>}
         <div className="save-slot-actions">
-          {saved && <button type="button" onClick={() => onLoad(structuredClone(saved.state), saved.officerId)}><ArchiveRestore size={17} />读取</button>}
+          {saved && <button type="button" onClick={() => onLoad(structuredClone(saved.state), saved.officerId, saved.advisorAdvice ? structuredClone(saved.advisorAdvice) : null, saved.advisorQuestion ?? defaultAdvisorQuestion)}><ArchiveRestore size={17} />读取</button>}
           <button type="button" onClick={() => writeSlot(slot)}><Save size={17} />{saved ? '覆盖' : '保存'}</button>
           {saved && <button className="danger" type="button" aria-label={`清除存档 ${slot}`} onClick={() => clearSlot(slot)}><Trash2 size={16} />清除</button>}
         </div>

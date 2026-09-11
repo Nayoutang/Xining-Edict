@@ -112,7 +112,7 @@ button { font: inherit; }
 .advisor-cautions { border: 1px solid #d5c5a6; background: #fbf1df; padding: 7px 9px; }
 .advisor-cautions p { margin: 3px 0; color: #725a3c; font-size: 10px; line-height: 1.55; }
 .advisor-draft { margin-top: 11px; }
-.advisor-draft pre { max-height: 180px; overflow: auto; margin: 0 0 8px; border: 1px solid #d0c0a0; background: #f8efe0; padding: 10px; white-space: pre-wrap; color: #403a32; font: 11px/1.75 SimSun,serif; }
+.advisor-draft pre { max-height: 180px; overflow: auto; margin: 0 0 8px; border: 1px solid #d0c0a0; background: #f8efe0; padding: 10px; white-space: pre-wrap; color: #403a32; font: 11px/1.75 SimSun,serif; user-select: none; -webkit-user-select: none; }
 .advisor-draft button { width: 100%; }
 .panel-seal { width: 100%; min-height: 66px; flex-direction: row; }
 .panel-seal span { width: 38px; height: 38px; }
