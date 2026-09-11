@@ -172,7 +172,7 @@ function fallbackSituation(state, mainName, supportName, event) {
   const turn = Math.max(1, Number(state?.turn || 1));
   const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
   const eventText = event?.title ? `\u672C\u56DE\u6025\u52A1\u662F\u201C${event.title}\u201D\uFF1A${event.description || "\u8BE6\u60C5\u672A\u8F7D"}` : "\u672C\u56DE\u6025\u52A1\u5C1A\u5F85\u7ED3\u5408\u5FA1\u6848\u4E8B\u4EF6\u5224\u65AD";
-  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u56FD\u52BF\u6700\u8584\u4E4B\u5904\u662F${weakest}\uFF1B${trend}\u3002${eventText}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u53EF\u627F\u53D7\u4E00\u4E3B\u4E00\u8F85\uFF0C\u4E0D\u5B9C\u56DB\u9762\u94FA\u5F00\u3002\u56E0\u6B64\u5148\u653B${mainName}\uFF0C\u4EE5${supportName}\u6258\u5E95\u3002`;
+  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u56FD\u52BF\u6700\u8584\u4E4B\u5904\u662F${weakest}\uFF1B${trend}\u3002${eventText}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u672C\u671F\u4E3B\u9879\uFF1A${mainName || "\u65E0"}\uFF1B\u8F85\u9879\uFF1A${supportName || "\u65E0"}\u3002\u5177\u4F53\u80FD\u5426\u627F\u62C5\u987B\u7ED3\u5408\u653F\u52A1\u6210\u672C\u5224\u65AD\u3002`;
 }
 function normalizeSituation(value, state, mainName, supportName, event) {
   const cleaned = modernizeAdvisorText(value).replace(/[\r\n|]+/g, "\uFF0C").trim();
@@ -222,17 +222,16 @@ function pausedSentence(value, definition, turn, indicators = {}) {
 function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = {}) {
   const source = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
   const byName = new Map(source.map((item) => [localizeInternalTerms(item?.name), item]));
-  let mainName = advisorDimensions.find(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "") === "\u4E3B")?.name;
-  if (!mainName) mainName = advisorDimensions[0].name;
-  let supportName = advisorDimensions.find(({ name }) => name !== mainName && localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "") === "\u8F85")?.name;
-  if (!supportName) supportName = advisorDimensions.find(({ name }) => name !== mainName)?.name;
+  const mainName = advisorDimensions.filter(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "").trim() === "\u4E3B").map(({ name }) => name).join("\u3001");
+  const supportName = advisorDimensions.filter(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, "").trim() === "\u8F85").map(({ name }) => name).join("\u3001");
   const turn = Math.max(1, Math.min(8, Math.round(Number(state?.turn) || 1)));
   const previousPolicyIds = new Set((state?.history || []).flatMap((record) => record?.policyIds || []));
   const documentedPolicyIds = new Set((state?.history || []).flatMap((record) => (record?.policyOutcomes || []).map((outcome) => outcome?.policyId).filter(Boolean)));
   const previousAdvice = (state?.advisorHistory || []).join("\n");
   const dimensions = advisorDimensions.map((definition) => {
     const item = byName.get(definition.name) || {};
-    const role = definition.name === mainName ? "\u4E3B" : definition.name === supportName ? "\u8F85" : "\u6682\u7F13";
+    const requestedRole = localizeInternalTerms(item?.role).replace(/[【】]/g, "").trim();
+    const role = ["\u4E3B", "\u8F85", "\u6682\u7F13"].includes(requestedRole) ? requestedRole : "\u6682\u7F13";
     const requestedPolicyId = String(item?.policyId || "");
     const policyId = definition.allowed.includes(requestedPolicyId) ? requestedPolicyId : definition.policyId;
     const fallback = definition.actions[turn - 1] || definition.actions.at(-1);
@@ -255,7 +254,7 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
     };
   });
   const situation = normalizeSituation(parsed.situation, state, mainName, supportName, event);
-  const personnelRecommendation = recommendCourtPersonnel(state, mainName);
+  const personnelRecommendation = mainName ? recommendCourtPersonnel(state, mainName.split("\u3001")[0]) : null;
   const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}\uFF0C\u8350${personnelRecommendation.officerName}\u3002` : conciseSentence(parsed.personnel, "\u672C\u671F\u65E0\u5408\u9002\u7684\u672A\u4EFB\u5019\u9009\u4EBA\u3002", 72);
   const render = (items) => [
     "\u5C40\u52BF\u7814\u5224:",
@@ -388,11 +387,11 @@ ${formatHistory(state?.history || [])}
 }`;
   const system = `\u4F60\u662F\u5386\u53F2\u7B56\u7565\u6E38\u620F\u300A\u7199\u5B81\u6289\u62E9\u300B\u7684\u8F85\u653F\u5B98\uFF0C\u4E0D\u662F\u63A8\u6F14\u53F2\u5B98\u3002
 1. \u4F60\u53EA\u80FD\u5728\u9881\u8BCF\u524D\u63D0\u4F9B\u63D0\u7EB2\uFF0C\u4E25\u7981\u751F\u6210\u53EF\u76F4\u63A5\u9881\u884C\u7684\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E0D\u80FD\u58F0\u79F0\u653F\u7B56\u5DF2\u7ECF\u5B9E\u65BD\u3002
-2. \u5FC5\u987B\u4F5C\u51FA\u53D6\u820D\uFF1A\u6070\u597D\u4E00\u9879\u3010\u4E3B\u3011\u3001\u4E00\u9879\u3010\u8F85\u3011\u3001\u4E24\u9879\u3010\u6682\u7F13\u3011\u3002
+2. \u6309\u56F0\u5883\u4E25\u91CD\u5EA6\u4E0E\u53EF\u7528\u9884\u7B97\u4F5C\u51FA\u53D6\u820D\uFF1B\u4E3B\u8F85\u6570\u91CF\u4E0D\u56FA\u5B9A\uFF0C\u5141\u8BB8\u591A\u4E2A\u4E3B\u9879\u3001\u6CA1\u6709\u8F85\u9879\u6216\u5168\u90E8\u6682\u7F13\u3002
 3. \u5C0A\u91CD\u7199\u5B81\u3001\u5143\u4E30\u65F6\u671F\u7684\u673A\u6784\u3001\u8D44\u6E90\u548C\u653F\u6CBB\u8BED\u8A00\u3002
 4. \u56FA\u5B9A\u5217\u51FA\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u56DB\u9879\u4E14\u987A\u5E8F\u4E0D\u53EF\u6539\u53D8\uFF0C\u4E0D\u65B0\u589E\u5236\u5EA6\u3001\u4EFB\u514D\u3001\u5916\u4EA4\u7B49\u7EF4\u5EA6\u3002
 5. \u53EF\u5F15\u7528\u4EBA\u7269\u7ACB\u573A\uFF0C\u4F46\u4E0D\u5F97\u628A\u4EBA\u7269\u7B80\u5355\u5224\u4E3A\u5FE0\u81E3\u6216\u5978\u81E3\u3002
-6. \u5FC5\u987B\u4F18\u5148\u4FDD\u8BC1\u4E3B\u8F85\u4E24\u9879\u5728\u5F53\u524D\u653F\u7565\u3001\u884C\u653F\u4E0E\u56FD\u5E93\u9884\u7B97\u5185\u53EF\u6301\u7EED\u6267\u884C\u3002
+6. \u5FC5\u987B\u4F18\u5148\u4FDD\u8BC1\u6240\u6709\u4E3B\u8F85\u9879\u5728\u5F53\u524D\u653F\u7565\u3001\u884C\u653F\u4E0E\u56FD\u5E93\u9884\u7B97\u5185\u53EF\u6301\u7EED\u6267\u884C\u3002
 7. \u6BCF\u9879\u53EA\u6709\u4E00\u53E5\u5177\u4F53\u53EF\u6267\u884C\u5EFA\u8BAE\uFF1B\u6682\u7F13\u9879\u53EA\u5199\u6682\u7F13\u7406\u7531\uFF0C\u4E0D\u5F97\u5939\u5E26\u63AA\u65BD\u3002
 8. \u5C40\u52BF\u5206\u6790\u548C\u5168\u90E8\u63D0\u7EB2\u6587\u5B57\u90FD\u5FC5\u987B\u4F7F\u7528\u73B0\u4EE3\u767D\u8BDD\uFF0C\u4E3B\u8F85\u9879\u5404\u7ED9\u4E00\u4E2A\u9700\u8981\u73A9\u5BB6\u88C1\u5B9A\u7684\u4E8C\u9009\u4E00\u95EE\u9898\uFF1B\u603B\u663E\u793A\u6587\u672C\u4E0D\u5F97\u8D85\u8FC7\u4E5D\u767E\u5B57\u3002
 9. \u94E8\u9009\u5EFA\u8BAE\u4EC5\u80FD\u6539\u6388\u73B0\u6709\u5C97\u4F4D\uFF0C\u4E0D\u5F97\u6539\u9769\u5B98\u5236\u67B6\u6784\uFF0C\u4E5F\u4E0D\u5F97\u81EA\u52A8\u4EFB\u514D\u3002

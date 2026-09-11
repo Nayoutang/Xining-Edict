@@ -1,7 +1,26 @@
-import { getHistoricalEvent } from '../data/events';
+import { getHistoricalEvent, historicalEvents } from '../data/events';
 import type { DilemmaProgress, GameState } from './types';
 
 const clampSeverity = (value: number) => Math.max(1, Math.min(100, Math.round(value)));
+
+const eventResponses: Record<number, string[]> = {
+  1: ['reduce-redundant-spending', 'cross-check-ledgers'],
+  2: ['review-impeachments'],
+  3: ['curb-local-exactions'],
+  4: ['review-impeachments', 'cross-check-ledgers'],
+  5: ['water-conservancy', 'curb-local-exactions'],
+  6: ['northwest-defense'],
+  7: ['cross-check-ledgers', 'discipline-corrupt-officials'],
+  8: [],
+};
+
+function eventWasAnswered(state: GameState, eventTurn: number): boolean {
+  const responses = new Set(eventResponses[eventTurn] ?? []);
+  if (!responses.size) return true;
+  return state.history
+    .filter((record) => record.turn >= eventTurn)
+    .some((record) => record.policyIds.some((policyId) => responses.has(policyId)));
+}
 
 export function evaluateDilemmas(state: GameState): DilemmaProgress[] {
   const event = getHistoricalEvent(state.turn);
@@ -33,13 +52,31 @@ export function evaluateDilemmas(state: GameState): DilemmaProgress[] {
       severity: clampSeverity(100 - state.indicators.livelihood),
       reformDirection: '均平役法、赈济灾伤并抑制额外摊派。',
     },
-    {
+  ];
+
+  const currentTurnSettled = state.history.some((record) => record.turn === state.turn);
+  if (!currentTurnSettled && event.turn < 8) {
+    dilemmas.push({
       id: `urgent-${state.turn}`, title: event.title, category: 'urgent',
       description: event.description,
       severity: clampSeverity(35 + Object.values(event.effects).reduce((sum, value) => sum + Math.abs(value ?? 0), 0) * 5),
       reformDirection: '本期奏报将直接影响半年结算，应在诏书中作出回应。',
-    },
-  ];
+    });
+  }
+
+  for (const pastEvent of historicalEvents.filter((item) => item.turn < state.turn || (currentTurnSettled && item.turn <= state.turn))) {
+    if (pastEvent.turn >= 8 || eventWasAnswered(state, pastEvent.turn)) continue;
+    const originalSeverity = 35 + Object.values(pastEvent.effects).reduce((sum, value) => sum + Math.abs(value ?? 0), 0) * 5;
+    const age = Math.max(1, state.turn - pastEvent.turn);
+    dilemmas.push({
+      id: `unresolved-event-${pastEvent.turn}`,
+      title: `${pastEvent.title}遗留`,
+      category: 'urgent',
+      description: `${pastEvent.description}朝廷此前未以相应政务处置，影响已经延续。`,
+      severity: clampSeverity(originalSeverity + Math.min(15, age * 3)),
+      reformDirection: '补办与此事直接对应的政务；继续拖延会提高终局残余困境。',
+    });
+  }
 
   if (enacted.has('green-sprouts-trial') && state.indicators.execution < 50) {
     dilemmas.push({

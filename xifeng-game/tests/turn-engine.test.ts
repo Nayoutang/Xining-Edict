@@ -164,12 +164,12 @@ describe('半年回合结算', () => {
     expect(state.objectives.find((item) => item.id === 'reform-foundation')?.completed).toBe(true);
   });
 
-  it('完成四项国策且平均国势达到五十即可形成成果结局', () => {
+  it('终局以残余困境而非国势平均值形成成果结局', () => {
     const state = createInitialState();
     for (const key of Object.keys(state.indicators) as Array<keyof typeof state.indicators>) state.indicators[key] = 50;
-    state.objectives = state.objectives.map((objective, index) => ({ ...objective, completed: index < 4 }));
+    state.dilemmas = state.dilemmas.map((dilemma) => ({ ...dilemma, severity: 30 }));
 
-    expect(evaluateEnding(state)).toMatchObject({ id: 'balanced-reform', title: '新法有基', score: 50 });
+    expect(evaluateEnding(state)).toMatchObject({ id: 'balanced-reform', title: '新法有基', score: 70 });
   });
 
   it('五项国势尚健康但资源耗尽时给出可解释的非零总评', () => {
@@ -180,13 +180,13 @@ describe('半年回合结算', () => {
     expect(evaluateEnding(state)).toMatchObject({
       id: 'collapse',
       title: '政令停摆',
-      score: 56,
+      score: 45,
     });
-    expect(evaluateEnding(state).description).toContain('五项国势');
+    expect(evaluateEnding(state).description).toContain('困境治理');
     expect(evaluateEnding(state).description).toContain('行政余量');
   });
 
-  it('按辅政官一主一辅节奏可完整走满八回合', () => {
+  it('每回选择两项政务仍可完整走满八回合', () => {
     let state = createInitialState();
     const decisions = [
       ['green-sprouts-trial', 'curb-local-exactions'],
@@ -206,10 +206,19 @@ describe('半年回合结算', () => {
 
     expect(state.history).toHaveLength(8);
     expect(state.ended).toBe(true);
-    expect(state.ending?.id).toBe('balanced-reform');
-    expect(state.ending?.score).toBe(65);
+    expect(state.ending?.id).not.toBe('collapse');
+    expect(state.ending?.score).toBeGreaterThanOrEqual(65);
     expect(state.resources.administration).toBeGreaterThan(0);
     expect(state.resources.politicalCapital).toBeGreaterThan(0);
+  });
+
+  it('未回应的当期急务会转为持续困境，补办对应政务后消退', () => {
+    let state = createInitialState();
+    state = settleTurn(state, { policyIds: ['water-conservancy'], officerId: 'wang-anshi' }).state;
+    expect(state.dilemmas.some((item) => item.id === 'unresolved-event-1')).toBe(true);
+
+    state = settleTurn(state, { policyIds: ['cross-check-ledgers'], officerId: 'wang-anshi' }).state;
+    expect(state.dilemmas.some((item) => item.id === 'unresolved-event-1')).toBe(false);
   });
 
   it('按财政主项与吏治辅项拟诏时只结算两项行政消耗', () => {
