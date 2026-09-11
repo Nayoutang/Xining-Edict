@@ -15,7 +15,7 @@ npm run typecheck
 
 ## AI 推演配置
 
-- AI 辅政官与推演史官固定共用 `deepseek-v4-flash`，Base URL 为 `https://api.deepseek.com`；两种职责由不同系统提示词区分。
+- AI 辅政官与推演史官固定共用 `deepseek-flash`（当前由 DeepSeek-V4.1-Flash 提供服务），Base URL 为 `https://api.deepseek.com`；两种职责由不同系统提示词区分。
 - 从百炼配置迁移时会清空旧 Key，避免把百炼 Key 误用于 DeepSeek；需要在设置页重新填写 DeepSeek API Key。
 
 ## 内容入口

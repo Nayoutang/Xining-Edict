@@ -686,13 +686,13 @@ function AISettings({ inferenceConfig, onSave }: { inferenceConfig: AIConfig; on
   const [testing, setTesting] = useState(false);
   const fixedConfig: AIConfig = { ...inferenceDraft, provider: 'deepseek', model: providerDefaults.deepseek.model, baseUrl: providerDefaults.deepseek.baseUrl };
   return <form className="ai-settings" onSubmit={(event) => { event.preventDefault(); onSave(fixedConfig); }}>
-    <p className="settings-note">辅政官与推演史官共用一套已验证的 DeepSeek 配置。两个角色均固定使用 deepseek-v4-flash，以不同提示词区分职责，避免额外模型权限、思考模式和并发问题。API Key只保存在当前浏览器。</p>
+    <p className="settings-note">辅政官与推演史官共用一套已验证的 DeepSeek 配置。两个角色均固定使用 deepseek-flash（V4.1 Flash），以不同提示词区分职责，避免额外模型权限、思考模式和并发问题。API Key只保存在当前浏览器。</p>
     <label>模型厂商<input value="DeepSeek" readOnly /></label>
     <label>API Key<input type="password" value={inferenceDraft.apiKey} onChange={(event) => setInferenceDraft({ ...inferenceDraft, apiKey: event.target.value })} placeholder="sk-..." autoComplete="off" /></label>
     <label>Base URL<input value={providerDefaults.deepseek.baseUrl} readOnly /></label>
-    <div className="dual-model-settings"><label><span>辅政官模型</span><small>格局分析与草诏</small><input value="deepseek-v4-flash" readOnly /></label><label><span>推演史官模型</span><small>诏意识别与半年推演</small><input value="deepseek-v4-flash" readOnly /></label></div>
+    <div className="dual-model-settings"><label><span>辅政官模型</span><small>格局分析与草诏</small><input value="deepseek-flash（V4.1 Flash）" readOnly /></label><label><span>推演史官模型</span><small>诏意识别与半年推演</small><input value="deepseek-flash（V4.1 Flash）" readOnly /></label></div>
     {testStatus && <p className={`connection-status ${testStatus.startsWith('连接成功') ? 'success' : 'failure'}`}>{testStatus}</p>}
-    <div className="settings-actions three"><button type="button" onClick={() => { setInferenceDraft({ ...fixedConfig, apiKey: '' }); setTestStatus(''); }}>清空 Key</button><button type="button" disabled={testing || !inferenceDraft.apiKey} onClick={async () => { setTesting(true); setTestStatus(''); try { await testAIConnectionRemote(fixedConfig); setTestStatus('连接成功：辅政官与推演史官的共享模型已就绪'); } catch (caught) { setTestStatus(`连接失败：共享模型 deepseek-v4-flash：${caught instanceof Error ? caught.message : '未知错误'}`); } finally { setTesting(false); } }}>{testing ? '测试中…' : '测试共享模型'}</button><button type="submit">保存设置</button></div>
+    <div className="settings-actions three"><button type="button" onClick={() => { setInferenceDraft({ ...fixedConfig, apiKey: '' }); setTestStatus(''); }}>清空 Key</button><button type="button" disabled={testing || !inferenceDraft.apiKey} onClick={async () => { setTesting(true); setTestStatus(''); try { await testAIConnectionRemote(fixedConfig); setTestStatus('连接成功：辅政官与推演史官的共享模型已就绪'); } catch (caught) { setTestStatus(`连接失败：共享模型 deepseek-flash：${caught instanceof Error ? caught.message : '未知错误'}`); } finally { setTesting(false); } }}>{testing ? '测试中…' : '测试共享模型'}</button><button type="submit">保存设置</button></div>
   </form>;
 }
 

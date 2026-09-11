@@ -1,5 +1,5 @@
 const PROVIDERS = {
-  deepseek: { apiType: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash' },
+  deepseek: { apiType: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash' },
   openai: { apiType: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
   anthropic: { apiType: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', model: 'claude-3-5-sonnet-latest' },
   qwen: { apiType: 'openai', baseUrl: 'https://ws-esx5vi3vpbs2mg95.cn-beijing.maas.aliyuncs.com/compatible-mode/v1', model: 'qwen3.7-plus' },

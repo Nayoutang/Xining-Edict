@@ -52,7 +52,7 @@ export default {
         provider: 'deepseek',
         apiKey: env.DEEPSEEK_API_KEY,
         baseUrl: 'https://api.deepseek.com',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
       };
 
       const path = new URL(request.url).pathname;

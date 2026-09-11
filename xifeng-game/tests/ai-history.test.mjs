@@ -16,7 +16,7 @@ describe('AI史实推理边界', () => {
       requestBody = JSON.parse(options.body);
       return mockResponse({ message: '已就绪' });
     });
-    await testAIConnection({ config: { provider: 'deepseek', apiKey: ' sk-test\r\n', model: 'deepseek-v4-flash' }, fetchImpl });
+    await testAIConnection({ config: { provider: 'deepseek', apiKey: ' sk-test\r\n', model: 'deepseek-flash' }, fetchImpl });
     expect(authorization).toBe('Bearer sk-test');
     expect(requestBody.thinking).toEqual({ type: 'disabled' });
   });
