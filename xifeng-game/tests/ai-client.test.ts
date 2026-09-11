@@ -51,4 +51,19 @@ describe('辅政官响应协议兼容', () => {
     expect(result.personnelRecommendation).toBeUndefined();
     expect(result.personnel).toBe('本期无合适的未任候选人。');
   });
+
+  it('模型只谈国势时强制补入最高困境及严重度', () => {
+    const state = createInitialState();
+    const result = adaptAdvisorAdvice({
+      situation: '当前最弱的是执行，应先改善执行。',
+      dimensions: [
+        { name: '财政', scope: '国库', role: '暂缓', advice: '本期暂缓。', policyId: 'cross-check-ledgers' },
+      ],
+    }, state);
+    const top = state.dilemmas[0]!;
+
+    expect(result.situation).toContain(top.title);
+    expect(result.situation).toContain(String(top.severity));
+    expect(result.situation).toContain('国势数值只判断能否承受');
+  });
 });

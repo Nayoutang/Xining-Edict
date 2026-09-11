@@ -152,6 +152,8 @@ var advisorPersonnelTargets = {
 };
 function fallbackSituation(state, mainName, supportName, event) {
   const indicators = state?.indicators || {};
+  const dilemmas = [...state?.dilemmas || []].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
+  const dilemmaText = dilemmas.length ? dilemmas.map((item) => `${item.title}\uFF08\u4E25\u91CD\u5EA6${item.severity}\uFF09`).join("\u3001") : "\u5F53\u524D\u6CA1\u6709\u663E\u8457\u56F0\u5883";
   const ranked = Object.entries(advisorIndicatorLabels).map(([key, label]) => ({ key, label, value: Number(indicators[key] ?? 0) })).sort((left, right) => left.value - right.value);
   const weakest = ranked.slice(0, 2).map((item) => `${item.label}${item.value}\uFF08${qualitative(item.value)}\uFF09`).join("\u3001");
   const previous = state?.history?.at?.(-1);
@@ -162,11 +164,15 @@ function fallbackSituation(state, mainName, supportName, event) {
   const turn = Math.max(1, Number(state?.turn || 1));
   const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
   const eventText = event?.title ? `\u672C\u56DE\u6025\u52A1\u662F\u201C${event.title}\u201D\uFF1A${event.description || "\u8BE6\u60C5\u672A\u8F7D"}` : "\u672C\u56DE\u6025\u52A1\u5C1A\u5F85\u7ED3\u5408\u5FA1\u6848\u4E8B\u4EF6\u5224\u65AD";
-  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u56FD\u52BF\u6700\u8584\u4E4B\u5904\u662F${weakest}\uFF1B${trend}\u3002${eventText}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u672C\u671F\u4E3B\u9879\uFF1A${mainName || "\u65E0"}\uFF1B\u8F85\u9879\uFF1A${supportName || "\u65E0"}\u3002\u5177\u4F53\u80FD\u5426\u627F\u62C5\u987B\u7ED3\u5408\u653F\u52A1\u6210\u672C\u5224\u65AD\u3002`;
+  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u5F53\u524D\u4F18\u5148\u56F0\u5883\u662F${dilemmaText}\u3002${eventText}\u3002\u56FD\u52BF\u4EC5\u4F5C\u627F\u8F7D\u8FB9\u754C\uFF1A${weakest}\uFF1B${trend}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u672C\u671F\u4E3B\u9879\uFF1A${mainName || "\u65E0"}\uFF1B\u8F85\u9879\uFF1A${supportName || "\u65E0"}\u3002`;
 }
 function normalizeSituation(value, state, mainName, supportName, event) {
   const cleaned = modernizeAdvisorText(value).replace(/[\r\n|]+/g, "\uFF0C").trim();
-  return (cleaned || fallbackSituation(state, mainName, supportName, event)).slice(0, 320);
+  const base = cleaned || fallbackSituation(state, mainName, supportName, event);
+  const priorities = [...state?.dilemmas || []].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
+  const fullyGrounded = priorities.slice(0, 2).every((item) => base.includes(item.title) && base.includes(String(item.severity)));
+  const grounded = priorities.length && !fullyGrounded ? `\u5F53\u524D\u56F0\u5883\u6309\u4E25\u91CD\u5EA6\u6392\u5E8F\u4E3A${priorities.map((item) => `${item.title}${item.severity}`).join("\u3001")}\uFF1B\u65BD\u653F\u5148\u540E\u4EE5\u6B64\u4E3A\u51C6\uFF0C\u56FD\u52BF\u6570\u503C\u53EA\u5224\u65AD\u80FD\u5426\u627F\u53D7\u3002${base}` : base;
+  return grounded.slice(0, 320);
 }
 function decisionFor(name, role, value) {
   if (role === "\u6682\u7F13") return "";
@@ -301,11 +307,13 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
     \u627F\u529E: allowedOfficers.find(([id]) => id === item?.officerId)?.[1] || item?.officerId,
     \u5C1A\u4F59\u56DE\u5408: item?.remainingTurns
   }));
+  const rankedDilemmas = [...state?.dilemmas || []].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).map((item) => ({ \u540D\u79F0: item.title, \u7C7B\u578B: item.category, \u4E25\u91CD\u5EA6: item.severity, \u6539\u9769\u65B9\u5411: item.reformDirection }));
   const prompt = `\u4F60\u5728\u5B8B\u795E\u5B97\u7199\u5B81\u671D\u62C5\u4EFB\u5FA1\u524D\u8F85\u653F\u5B98\u3002\u73A9\u5BB6\u5C1A\u672A\u9881\u8BCF\uFF0C\u4F60\u53EA\u8D1F\u8D23\u63D0\u4F9B\u5206\u7EF4\u5EA6\u65BD\u653F\u63D0\u7EB2\uFF0C\u7EDD\u4E0D\u80FD\u4EE3\u5199\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E5F\u4E0D\u80FD\u66FF\u73A9\u5BB6\u4F5C\u6700\u7EC8\u51B3\u5B9A\u3002
 
 \u5F53\u524D\u65F6\u95F4\uFF1A${formatDate(state?.date)}
 \u5F53\u524D\u56DE\u5408\uFF1A\u7B2C${currentTurn}/${maxTurns}\u56DE\uFF1B\u8DDD\u7EC8\u5C40\u5C1A\u4F59${remainingTurns}\u56DE\uFF1B\u9636\u6BB5\uFF1A${stage}
-\u4E94\u9879\u56FD\u52BF\uFF1A\u8D22\u7528${state?.indicators?.finance ?? "\u672A\u77E5"}\uFF0C\u6C11\u751F${state?.indicators?.livelihood ?? "\u672A\u77E5"}\uFF0C\u8FB9\u5907${state?.indicators?.defense ?? "\u672A\u77E5"}\uFF0C\u58EB\u8BBA${state?.indicators?.courtSupport ?? "\u672A\u77E5"}\uFF0C\u6267\u884C${state?.indicators?.execution ?? "\u672A\u77E5"}
+\u5F53\u524D\u56F0\u5883\u4F18\u5148\u5E8F\uFF08\u65BD\u653F\u6392\u5E8F\u9996\u5148\u4F9D\u636E\u4E25\u91CD\u5EA6\uFF09\uFF1A${JSON.stringify(rankedDilemmas)}
+\u4E94\u9879\u56FD\u52BF\uFF08\u53EA\u4F5C\u4E3A\u5931\u8D25\u754C\u9650\u3001\u98CE\u9669\u6761\u4EF6\u4E0E\u627F\u8F7D\u80FD\u529B\uFF0C\u4E0D\u4F5C\u4E3A\u65BD\u653F\u4F18\u5148\u7EA7\uFF09\uFF1A\u8D22\u7528${state?.indicators?.finance ?? "\u672A\u77E5"}\uFF0C\u6C11\u751F${state?.indicators?.livelihood ?? "\u672A\u77E5"}\uFF0C\u8FB9\u5907${state?.indicators?.defense ?? "\u672A\u77E5"}\uFF0C\u58EB\u8BBA${state?.indicators?.courtSupport ?? "\u672A\u77E5"}\uFF0C\u6267\u884C${state?.indicators?.execution ?? "\u672A\u77E5"}
 \u5F53\u524D\u4F59\u91CF\uFF1A\u884C\u653F${administrativeRemaining}/${administrativeCapacity}\uFF0C\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\uFF0C\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F
 \u5F53\u524D\u56FD\u7B56\u6210\u679C\uFF08\u5DF2\u5B8C\u6210\uFF09\uFF1A${completedObjectives.length ? completedObjectives.join("\u3001") : "\u6682\u65E0"}
 \u8FDB\u884C\u4E2D\u4E8B\u9879\uFF1A${activeItems.length ? JSON.stringify(activeItems) : "\u6682\u65E0"}
@@ -355,7 +363,7 @@ ${formatHistory(state?.history || [])}
 }`;
   const system = `\u4F60\u662F\u5386\u53F2\u7B56\u7565\u6E38\u620F\u300A\u7199\u5B81\u6289\u62E9\u300B\u7684\u8F85\u653F\u5B98\uFF0C\u4E0D\u662F\u63A8\u6F14\u53F2\u5B98\u3002
 1. \u4F60\u53EA\u80FD\u5728\u9881\u8BCF\u524D\u63D0\u4F9B\u63D0\u7EB2\uFF0C\u4E25\u7981\u751F\u6210\u53EF\u76F4\u63A5\u9881\u884C\u7684\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E0D\u80FD\u58F0\u79F0\u653F\u7B56\u5DF2\u7ECF\u5B9E\u65BD\u3002
-2. \u6309\u56F0\u5883\u4E25\u91CD\u5EA6\u4E0E\u53EF\u7528\u9884\u7B97\u4F5C\u51FA\u53D6\u820D\uFF0C\u4E3B\u8F85\u6570\u91CF\u4E0D\u56FA\u5B9A\uFF0C\u5141\u8BB8\u591A\u4E2A\u4E3B\u9879\u3001\u6CA1\u6709\u8F85\u9879\u6216\u5168\u90E8\u6682\u7F13\u3002
+2. \u5FC5\u987B\u5148\u6309\u5F53\u524D\u56F0\u5883\u4E25\u91CD\u5EA6\u51B3\u5B9A\u65BD\u653F\u5148\u540E\uFF0C\u518D\u7528\u56FD\u52BF\u548C\u8D44\u6E90\u5224\u65AD\u98CE\u9669\u4E0E\u53EF\u6267\u884C\u6027\uFF1B\u4E0D\u5F97\u628A\u6700\u5F31\u56FD\u52BF\u76F4\u63A5\u5F53\u6210\u6700\u9AD8\u4F18\u5148\u7EA7\u3002\u4E3B\u8F85\u6570\u91CF\u4E0D\u56FA\u5B9A\uFF0C\u5141\u8BB8\u591A\u4E2A\u4E3B\u9879\u3001\u6CA1\u6709\u8F85\u9879\u6216\u5168\u90E8\u6682\u7F13\u3002
 3. \u5C0A\u91CD\u7199\u5B81\u3001\u5143\u4E30\u65F6\u671F\u7684\u673A\u6784\u3001\u8D44\u6E90\u548C\u653F\u6CBB\u8BED\u8A00\u3002
 4. \u56FA\u5B9A\u5217\u51FA\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u56DB\u9879\u4E14\u987A\u5E8F\u4E0D\u53EF\u6539\u53D8\uFF0C\u4E0D\u65B0\u589E\u5236\u5EA6\u3001\u4EFB\u514D\u3001\u5916\u4EA4\u7B49\u7EF4\u5EA6\u3002
 5. \u53EF\u5F15\u7528\u4EBA\u7269\u7ACB\u573A\uFF0C\u4F46\u4E0D\u5F97\u628A\u4EBA\u7269\u7B80\u5355\u5224\u4E3A\u5FE0\u81E3\u6216\u5978\u81E3\u3002

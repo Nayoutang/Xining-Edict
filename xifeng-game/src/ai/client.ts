@@ -62,6 +62,10 @@ function qualitative(value: number): string {
 
 function fallbackSituation(state: GameState | null, mainName: string, supportName: string, event?: HistoricalEvent): string {
   if (!state) return `本期主项：${mainName}；辅项：${supportName}。`;
+  const dilemmas = [...state.dilemmas].sort((left, right) => right.severity - left.severity).slice(0, 3);
+  const dilemmaText = dilemmas.length
+    ? dilemmas.map((item) => `${item.title}（严重度${item.severity}）`).join('、')
+    : '当前没有显著困境';
   const ranked = Object.entries(state.indicators)
     .map(([key, value]) => ({ key: key as keyof typeof dimensionLabels, value }))
     .sort((left, right) => left.value - right.value);
@@ -75,7 +79,16 @@ function fallbackSituation(state: GameState | null, mainName: string, supportNam
     : '尚无上期结算可供比较';
   const stage = state.turn <= 2 ? '前期摸底' : state.turn <= 5 ? '中期推行与纠偏' : '后期巩固与善后';
   const eventText = event ? `本回急务是“${event.title}”：${event.description}` : '本回急务尚待结合御案事件判断';
-  return `现处第${state.turn}/${state.maxTurns}回的${stage}阶段。国势最薄之处是${weakest}；${trend}。${eventText}。国库${state.resources.treasury}万贯、政略${state.resources.politicalCapital}、行政${state.resources.administration}/50，本期主项：${mainName}；辅项：${supportName}。具体能否承担须结合政务成本判断。`;
+  return `现处第${state.turn}/${state.maxTurns}回的${stage}阶段。当前优先困境是${dilemmaText}。${eventText}。国势仅作承载边界：${weakest}；${trend}。国库${state.resources.treasury}万贯、政略${state.resources.politicalCapital}、行政${state.resources.administration}/50，本期主项：${mainName}；辅项：${supportName}。`;
+}
+
+function groundSituationInDilemmas(value: string, state: GameState | null): string {
+  const cleaned = modernizeAdvisorText(value).replace(/[\r\n|]+/g, '，').trim();
+  if (!state?.dilemmas.length) return cleaned;
+  const priorities = [...state.dilemmas].sort((left, right) => right.severity - left.severity).slice(0, 3);
+  const fullyGrounded = priorities.slice(0, 2).every((item) => cleaned.includes(item.title) && cleaned.includes(String(item.severity)));
+  if (fullyGrounded) return cleaned;
+  return `当前困境按严重度排序为${priorities.map((item) => `${item.title}${item.severity}`).join('、')}；施政先后以此为准，国势数值只判断能否承受。${cleaned}`;
 }
 
 function recommendPersonnel(state: GameState | null, mainName: AdvisorAdvice['dimensions'][number]['name']): AdvisorAdvice['personnelRecommendation'] | undefined {
@@ -229,7 +242,8 @@ export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameSt
   if (Array.isArray(advice.dimensions) && advice.dimensions.length) {
     const dimensions = advice.dimensions.map((item) => ({ ...item, advice: modernizeAdvisorText(item.advice), decision: item.decision ? normalizeDecisionText(item.decision) : decisionFor(item.name, item.role) }));
     const mainName = dimensions.find((item) => item.role === '主')?.name;
-    const situation = typeof advice.situation === 'string' && advice.situation.trim() ? modernizeAdvisorText(advice.situation.trim()) : fallbackSituation(state, dimensions.filter((item) => item.role === '主').map((item) => item.name).join('、') || '无', dimensions.filter((item) => item.role === '辅').map((item) => item.name).join('、') || '无', event);
+    const rawSituation = typeof advice.situation === 'string' && advice.situation.trim() ? advice.situation.trim() : fallbackSituation(state, dimensions.filter((item) => item.role === '主').map((item) => item.name).join('、') || '无', dimensions.filter((item) => item.role === '辅').map((item) => item.name).join('、') || '无', event);
+    const situation = groundSituationInDilemmas(rawSituation, state).slice(0, 320);
     const personnelRecommendation = mainName ? recommendPersonnel(state, mainName) : undefined;
     const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : '本期无合适的未任候选人。';
     return { outline: renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation), situation, dimensions, personnel, personnelRecommendation, policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId) };
