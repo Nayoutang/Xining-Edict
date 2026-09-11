@@ -207,8 +207,7 @@ describe('半年回合结算', () => {
     expect(state.history).toHaveLength(8);
     expect(state.ended).toBe(true);
     expect(state.ending?.id).toBe('balanced-reform');
-    expect(state.ending?.score).toBeGreaterThanOrEqual(55);
-    expect(state.ending?.score).toBeLessThanOrEqual(80);
+    expect(state.ending?.score).toBe(65);
     expect(state.resources.administration).toBeGreaterThan(0);
     expect(state.resources.politicalCapital).toBeGreaterThan(0);
   });

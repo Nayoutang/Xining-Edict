@@ -40,8 +40,8 @@ describe('自由诏书解析', () => {
   it('允许直接粘贴辅政官提纲并解析其中的政务', () => {
     const outline = `行政余量:37/50
 
-财政|(国库与岁入)【主】核清三司岁入底数，旬末具报。
-民生|(百姓负担)【辅】核定灾伤户实负，分等造册。
+财政|(国库与岁入)【主】核查三司账目，十天内报上实际岁入。
+民生|(百姓负担)【辅】抽查州县是否额外加收费用，把多收的钱退回百姓。
 军事|(边备与军储)【暂缓】边警未至急迫，本期不做。
 吏治|(诏令能否落到州县)【暂缓】有司正承前令，本期不做。
 
@@ -50,14 +50,13 @@ describe('自由诏书解析', () => {
     const result = parseEdict(outline);
     expect(result.policyIds).toContain('cross-check-ledgers');
     expect(result.policyIds).toContain('curb-local-exactions');
-    expect(result.policyIds).not.toContain('northwest-defense');
+    expect(result.policyIds).toContain('northwest-defense');
   });
 
-  it('提纲中的铨选人名不会自动变更本回合承办官', () => {
+  it('整段文本不再因提纲格式跳过其中的执行官人名', () => {
     const outline = `局势研判:\n执行偏低，本期先查州县。\n\n行政余量:37/50\n\n财政|(国库与岁入)【主】核清三司账簿。\n民生|(百姓负担)【辅】核定灾伤户实负。\n军事|(边备与军储)【暂缓】边警尚缓。\n吏治|(诏令能否落到州县)【暂缓】有司方忙。\n\n铨选建议:\n岗位:三司·三司使\n推荐:曾布`;
     const result = parseEdict(outline);
-    expect(result.officerId).toBeNull();
-    expect(result.warnings).toContain('诏书未指名执行官，将沿用御前当前任命。');
+    expect(result.officerId).toBe('zeng-bu');
   });
 
   it('正常据提纲改写的诏书仍可提交并匹配财政与吏治', () => {
@@ -65,5 +64,11 @@ describe('自由诏书解析', () => {
     expect(result.policyIds).toContain('cross-check-ledgers');
     expect(result.policyIds).toContain('curb-local-exactions');
     expect(result.officerId).toBe('zeng-bu');
+  });
+
+  it('能识别采纳按钮追加的现代白话建议', () => {
+    const result = parseEdict('财政：核查三司账目，一个月内报上实际收入。\n吏治：抽查三个地区执行诏令的情况，报告积压和擅改的问题。');
+    expect(result.policyIds).toContain('cross-check-ledgers');
+    expect(result.policyIds).toContain('curb-local-exactions');
   });
 });

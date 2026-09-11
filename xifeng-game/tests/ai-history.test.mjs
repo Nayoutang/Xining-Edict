@@ -65,13 +65,14 @@ describe('AI史实推理边界', () => {
     const result = await adviseWithAI({ question: '该如何处置？', state: { resources: { administration: 32 } }, config, fetchImpl });
     expect(result.advice.outline).toContain('局势研判:');
     expect(result.advice.outline).toMatch(/行政余量:32\/50\n\n财政\|\(国库与岁入\)【主】/);
-    expect(result.advice.outline).toContain('\n铨选建议:命曾布专核三司账案。');
-    expect(result.advice.outline).toContain('须裁定：');
+    expect(result.advice.outline).toContain('\n铨选建议:让曾布专核三司账案。');
+    expect(result.advice.outline).toContain('需要决定：');
+    expect(result.advice.outline).not.toMatch(/具报|复奏|奉行|文移|案牍|实负|催科/);
     expect(result.advice.outline).not.toMatch(/制曰|奉诏|钦此|辅政草诏/);
     expect(result.advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
-  it('允许直接提交参详提纲，但服务端只解析主辅两项', async () => {
+  it('提交任何文本都走统一解析，不再对参详提纲做特殊截取', async () => {
     let requestBody;
     const fetchImpl = vi.fn(async (_url, options) => {
       requestBody = JSON.parse(options.body);
@@ -82,8 +83,9 @@ describe('AI史实推理边界', () => {
       config, fetchImpl,
     });
     const prompt = requestBody.messages.map((message) => message.content).join('\n');
-    expect(prompt).not.toContain('军事|(边备与军储)【暂缓】');
-    expect(prompt).not.toContain('吏治|(诏令能否落到州县)【暂缓】');
+    expect(prompt).toContain('军事|(边备与军储)【暂缓】');
+    expect(prompt).toContain('吏治|(诏令能否落到州县)【暂缓】');
+    expect(prompt).not.toContain('只解析【主】与【辅】');
     expect(result.interpretation.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 

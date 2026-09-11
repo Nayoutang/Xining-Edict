@@ -4,6 +4,7 @@ import { appointCourtOfficer, createInitialState, describeCourtCandidateFit, dis
 import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, providerDefaults, testAIConnectionRemote } from '../ai/client';
 import type { AdvisorAdvice, AIConfig, CourtOfficeKey, CourtPostKey, DilemmaProgress, EdictInterpretation, GameState, HistoricalEvent, HistoricalNarrative, IndicatorKey, Officer, TurnRecord } from '..';
 import { GameScreen } from './GameScreen';
+import { appendAdoptedAdvice } from './advisor-adopt';
 import { paginate } from './pagination';
 import { addPlainReactionLead, localizeAdvisorAdvice, localizeDisplayText, localizeHistoricalNarrative } from './text-localization';
 
@@ -93,6 +94,13 @@ export function App() {
 
   function updateEdict(text: string) {
     setEdictText(text);
+    setInterpretation(null);
+    setPolicyIds([]);
+    setError('');
+  }
+
+  function adoptAdvisorAdvice(suggestion: string) {
+    setEdictText((current) => appendAdoptedAdvice(current, suggestion));
     setInterpretation(null);
     setPolicyIds([]);
     setError('');
@@ -200,7 +208,7 @@ export function App() {
       }} />}
       {panel === 'edict' && <div className="edict-stage">
         <div className="edict-advisor-column">
-          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} setBusy={setAIBusy} question={advisorQuestion} onQuestionChange={setAdvisorQuestion} advice={advisorAdvice} onAdvice={(nextAdvice) => { setAdvisorAdvice(nextAdvice); setState((current) => ({ ...current, advisorHistory: [...(current.advisorHistory ?? []), nextAdvice.outline].slice(-6) })); }} />
+          <AdvisorWorkspace state={state} event={event} officer={officer} currentEdict={edictText} config={advisorConfig} setBusy={setAIBusy} question={advisorQuestion} onQuestionChange={setAdvisorQuestion} advice={advisorAdvice} onAdvice={(nextAdvice) => { setAdvisorAdvice(nextAdvice); setState((current) => ({ ...current, advisorHistory: [...(current.advisorHistory ?? []), nextAdvice.outline].slice(-6) })); }} onAdopt={adoptAdvisorAdvice} />
         </div>
         <div className="edict-workspace">
           <div className="edict-composer">
@@ -590,7 +598,7 @@ function Records({ state }: { state: GameState }) {
   </div>;
 }
 
-function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy, question, onQuestionChange, advice, onAdvice }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; setBusy: (text: string) => void; question: string; onQuestionChange: (value: string) => void; advice: AdvisorAdvice | null; onAdvice: (advice: AdvisorAdvice) => void }) {
+function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy, question, onQuestionChange, advice, onAdvice, onAdopt }: { state: GameState; event: HistoricalEvent; officer: Officer; currentEdict: string; config: AIConfig; setBusy: (text: string) => void; question: string; onQuestionChange: (value: string) => void; advice: AdvisorAdvice | null; onAdvice: (advice: AdvisorAdvice) => void; onAdopt: (suggestion: string) => void }) {
   const [advisorError, setAdvisorError] = useState('');
 
   async function consult() {
@@ -611,10 +619,19 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
     <p>{advice ? '辅政官已据当前国势、余量与官署人事列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官会先说明当前局势，再列施政取舍与铨选建议；诏书正文仍由陛下裁定。'}</p>
     <div className="advisor-question"><textarea value={question} onChange={(e) => onQuestionChange(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
-    {advice && <>
-      <div className="advisor-answer"><div className="advisor-draft"><h4>参详提纲</h4><pre onCopy={(event) => event.preventDefault()} onCut={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>{advice.outline}</pre></div></div>
-      <button className="advisor-adopt" type="button" disabled>请据提纲自行拟诏</button>
-    </>}
+    {advice && <div className="advisor-answer"><div className="advisor-draft">
+      <h4>参详提纲</h4>
+      <div className="advisor-outline">
+        <section className="advisor-situation"><strong>局势研判</strong><p>{advice.situation}</p></section>
+        <p className="advisor-capacity">行政余量：{state.resources.administration}/50</p>
+        <div className="advisor-dimensions">{advice.dimensions.map((item) => <article key={item.name}>
+          <div><strong>{item.name}|（{item.scope}）【{item.role}】</strong>{item.role !== '暂缓' && <button className="advisor-item-adopt" type="button" onClick={() => onAdopt(`${item.name}：${item.advice}`)}>采纳</button>}</div>
+          <p>{item.advice}</p>
+          {item.decision && <small>{item.decision}</small>}
+        </article>)}</div>
+        <section className="advisor-personnel"><strong>铨选建议</strong>{advice.personnelRecommendation ? <><p>岗位：{advice.personnelRecommendation.officeName}·{advice.personnelRecommendation.postTitle}</p><p>推荐：{advice.personnelRecommendation.officerName}</p><p>理由：{advice.personnelRecommendation.reason}</p><p>风险：{advice.personnelRecommendation.risk}</p></> : <p>{advice.personnel}</p>}</section>
+      </div>
+    </div></div>}
   </section>;
 }
 

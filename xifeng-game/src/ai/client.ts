@@ -1,4 +1,4 @@
-import { isAdvisorOutline, parseEdict, type EdictInterpretation } from './edict-parser';
+import type { EdictInterpretation } from './edict-parser';
 import { officers } from '../data/officers';
 import type { CourtOfficeKey, GameState, HistoricalEvent, Officer, Policy, PolicyTag, TurnRecord } from '../game/types';
 
@@ -50,10 +50,10 @@ interface LegacyAdvisorAdvice {
 }
 
 const advisorDimensionDefaults = [
-  { name: '财政', scope: '国库与岁入', policyId: 'cross-check-ledgers', indicator: 'finance', actions: ['核清三司岁入底数，旬末具报。', '按路核验实收差额，月内结案。', '比较新法钱谷实收，剔除虚数。', '追查账实不符款项，责主司说明。', '据中期账案收窄支用，保留赈备。', '清理积欠与虚冒，分路销账。', '复核历年财计成效，补足缺口。', '结清未决钱谷，封存终局账册。'], paused: ['国库尚可支应，本期急务在别处。', '财计波动有限，本期主辅另有短板。', '主辅成本已定，本期财力不宜分散。', '国库尚须留备，本期不宜另开财务。', '现有岁入可承，本期财政并非急项。', '本期主务耗资较多，财计余地有限。', '历年财计趋稳，本期更急者在他项。', '终局财力尚足，本期无需另占余量。'] },
-  { name: '民生', scope: '百姓负担', policyId: 'curb-local-exactions', indicator: 'livelihood', actions: ['核定灾伤户实负，分等造册。', '抽查青苗抑配，退还强敛钱物。', '比较诸路役钱轻重，先纠偏重县。', '核验水利受益户，减免无益之费。', '追查加派名目，责监司逐项销除。', '复核贫户减负实数，纠正漏免。', '清理遗留役债，禁止重复催科。', '汇总民户实负，办结未清申诉。'], paused: ['民户负担尚稳，本期急务不在民生。', '前令成效未定，本期不宜再扰民户。', '州县承载已紧，本期民务不宜并举。', '民生波动有限，本期尚非最急短板。', '当前实负未恶化，本期可让位主务。', '主辅已有更急方向，本期民务宜缓。', '既有减负尚在显效，本期无需叠加。', '终局民情可持，本期余量宜顾他项。'] },
-  { name: '军事', scope: '边备与军储', policyId: 'northwest-defense', indicator: 'defense', actions: ['盘点陕西军储缺口，十日具报。', '核对寨堡见粮，先补紧要处。', '查明转运迟滞路段，限期疏通。', '按边警轻重调剂军粮，不另增额。', '核验军需实到数，追查途中亏耗。', '补足关键寨堡月粮，暂停虚领。', '复查边备薄弱处，集中现有兵力。', '结清军储缺额，留足善后之用。'], paused: ['边警未至急迫，本期财力宜顾主务。', '军储尚可支应，本期边务并非短板。', '边情未见骤变，本期无需占用余量。', '现有寨堡可守，本期急务另有所属。', '军需压力可控，本期主辅不在边备。', '本期内政更急，边务暂无迫切之势。', '边备已稍稳，本期不宜分散国力。', '终局边情可持，本期无需另列实务。'] },
-  { name: '吏治', scope: '诏令能否落到州县', policyId: 'curb-local-exactions', indicator: 'execution', actions: ['梳理州县文移，列明承办官。', '抽验三路奉行实况，月内复奏。', '对照诏令与案牍，查出擅改条目。', '追究积压公文，责监司定期销案。', '按执行偏差分责，不作泛察。', '复核已劾官吏证据，依法结案。', '清理州县未结事项，逐件回奏。', '汇总奉行成效，处分失职官吏。'], paused: ['地方承载尚可，本期不宜叠加事务。', '有司余力已紧，本期应留主务。', '前令尚在消化，本期吏治并非首急。', '地方未见新壅，本期无需另占余量。', '现有承办尚稳，本期急务在别项。', '州县压力可控，本期不宜再添事务。', '执行已见改善，本期可让位更弱国势。', '终局承载尚足，本期无需另列吏务。'] },
+  { name: '财政', scope: '国库与岁入', policyId: 'cross-check-ledgers', indicator: 'finance', actions: ['核查三司账目，十天内报上实际岁入和未收款项。', '分地区核对账面收入与实际入库数，一个月内查清差额。', '比较新法预计收入与首轮实收，删掉虚报数字。', '查清账目与库存不符的钱款，让经办官说明去向。', '根据中期账目压缩次要开支，留下足够的赈灾储备。', '清查拖欠和冒领款项，按地区逐笔结清。', '复核历年财政措施的实际效果，优先补上最大缺口。', '结清仍有争议的钱款，整理并保存最终账册。'], paused: ['国库目前还能支撑，本期有更急的问题。', '财政变化不大，本期应先处理另外两项短板。', '主项和辅项已经占用本期资源，不能再分散财力。', '国库需要保留应急储备，本期不增加财政任务。', '现有收入还能支撑，本期财政不是最紧迫的问题。', '本期主要任务花费较多，没有余力再处理财政事务。', '财政已经逐步稳定，本期应先处理更弱的一项。', '终局前财力仍然够用，本期不再占用行政余量。'] },
+  { name: '民生', scope: '百姓负担', policyId: 'curb-local-exactions', indicator: 'livelihood', actions: ['核实受灾家庭的实际负担，按受灾程度登记成册。', '抽查是否强迫百姓借青苗钱，把多收的钱物退回去。', '比较各地役钱负担，先纠正收费最重的州县。', '核实哪些家庭真正从水利工程受益，免掉没有受益者的费用。', '查清州县额外加收的名目，让监司逐项取消。', '复核贫困家庭实际少交了多少，补上遗漏的减免。', '清理过去留下的役钱欠账，禁止对同一笔钱重复催收。', '汇总百姓最终承担的钱役，办完尚未处理的申诉。'], paused: ['百姓负担目前稳定，本期有更急的问题。', '上一道诏令的效果还没看清，本期不再增加百姓负担。', '州县人手已经紧张，本期不能同时增加民生任务。', '民生变化不大，目前还不是最急的短板。', '百姓实际负担没有恶化，本期先让位于主要任务。', '主项和辅项已有更急方向，本期暂不处理民生。', '已有减负措施正在生效，本期不重复增加政策。', '终局前民情还能维持，本期资源先用在其他问题上。'] },
+  { name: '军事', scope: '边备与军储', policyId: 'northwest-defense', indicator: 'defense', actions: ['盘点陕西各处军粮，十天内报出缺口最大的寨堡。', '核对各寨堡现存军粮，先补给最紧急的据点。', '查清军粮运输在哪些路段耽搁，规定期限恢复通行。', '按边境警情调配现有军粮，本期不额外增加总量。', '核对军需实际送达数量，查清运输途中的损耗。', '补足关键寨堡一个月的军粮，暂停没有依据的冒领。', '复查边防最薄弱的地区，把现有兵力集中到那里。', '补齐最后的军粮缺口，并留下足够储备用于善后。'], paused: ['边境警情还不紧急，本期财力先用于主要任务。', '现有军粮还能支撑，本期边防不是最弱的一项。', '边境形势没有突然恶化，本期不占用行政余量。', '现有寨堡还能守住，本期有更紧急的问题。', '军需压力仍可控制，本期主项和辅项不放在边防。', '本期内政问题更急，边防暂时没有迫切风险。', '边防已经有所稳定，本期不再分散国力。', '终局前边境还能维持，本期不新增军事任务。'] },
+  { name: '吏治', scope: '诏令能否落到州县', policyId: 'curb-local-exactions', indicator: 'execution', actions: ['整理州县收到却未办完的公文，标出每件事的负责人。', '抽查三个地区执行诏令的情况，一个月内报告积压和擅改的问题。', '逐条比较朝廷诏令与州县办案记录，查出被私自改动的内容。', '清查积压公文，让监司按期限逐件处理完毕。', '按执行偏差划分责任，只查有具体问题的官员。', '复核被弹劾官员的证据，证据充分的按规定结案。', '清理州县尚未办完的事项，逐件报告处理结果。', '汇总各地执行成效，对确实失职的官员作出处分。'], paused: ['地方目前还能承受，本期不再增加执行任务。', '官署人手已经紧张，本期资源要留给主要任务。', '上一道诏令仍在执行，本期吏治不是最紧急的问题。', '地方没有出现新的积压，本期不占用行政余量。', '现有承办情况稳定，本期有更急的问题。', '州县压力仍可控制，本期不再增加事务。', '执行情况已经改善，本期先处理更弱的一项。', '终局前地方还能承受，本期不新增吏治任务。'] },
 ] as const;
 
 const policyDimension: Record<string, AdvisorAdvice['dimensions'][number]['name']> = {
@@ -128,23 +128,116 @@ function recommendPersonnel(state: GameState | null, mainName: AdvisorAdvice['di
 function decisionFor(name: AdvisorAdvice['dimensions'][number]['name'], role: string): string | undefined {
   if (role === '暂缓') return undefined;
   const decisions = {
-    '财政': '须裁定：先封存争议账目，还是允许三司自查后再追责。',
-    '民生': '须裁定：先减免已查实重户，还是等全路造册后一并处置。',
-    '军事': '须裁定：优先补军粮还是修寨堡，本期只能先保一项。',
-    '吏治': '须裁定：先准州县自纠，还是直接追责承办主官。',
+    '财政': '需要决定：先冻结有争议的账目，还是先让三司自行核查再追责。',
+    '民生': '需要决定：先给已经查清的重灾户减免，还是等全部名单完成后统一处理。',
+    '军事': '需要决定：本期优先补军粮，还是优先修寨堡，只能先选一项。',
+    '吏治': '需要决定：先让州县自行纠正，还是直接追究负责官员。',
   } as const;
   return decisions[name];
 }
 
+function modernizeAdvisorText(value: string): string {
+  return value
+    .replace(/具报|复奏/g, '报告结果')
+    .replace(/奉行/g, '执行')
+    .replace(/文移/g, '公文')
+    .replace(/案牍/g, '办案记录')
+    .replace(/实负/g, '实际负担')
+    .replace(/催科/g, '催收')
+    .replace(/诸路/g, '各地')
+    .replace(/旬末/g, '十天内')
+    .replace(/核清/g, '核查清楚')
+    .replace(/有司/g, '负责官署')
+    .replace(/主司/g, '负责官署')
+    .replace(/^差/g, '安排')
+    .replace(/^命/g, '让')
+    .replace(/差([^，。]+?)专领/g, '安排$1负责')
+    .replace(/专领/g, '负责')
+    .replace(/选三路/g, '选择三个地区')
+    .replace(/上供定额/g, '规定上交朝廷的数额')
+    .replace(/支移折变/g, '临时调拨和折算')
+    .replace(/对勘/g, '核对')
+    .replace(/实额/g, '实际数额')
+    .replace(/督责/g, '督促并追责')
+    .replace(/具册/g, '整理成册')
+    .replace(/正赋/g, '规定税额')
+    .replace(/私行摊派/g, '私自额外收费')
+    .replace(/先择/g, '先选择')
+    .replace(/限一季/g, '三个月内')
+    .replace(/查禁/g, '检查并禁止')
+    .replace(/厘清/g, '查清')
+    .replace(/冗费/g, '不必要的开支')
+    .replace(/隐漏/g, '隐瞒和遗漏')
+    .replace(/岁入不敷/g, '收入不够支出')
+    .replace(/灾伤州军/g, '受灾地区')
+    .replace(/赋重州军/g, '税负较重的地区')
+    .replace(/州军/g, '地区')
+    .replace(/盐铁、度支、户部三案账簿/g, '盐铁、财政支出和户籍税收三类账目')
+    .replace(/可缓支项/g, '可以延后支出的项目')
+    .replace(/浮支/g, '不必要的开支')
+    .replace(/簿籍未立/g, '基础账册还没建立')
+    .replace(/只宜/g, '只能')
+    .replace(/，然/g, '，但')
+    .replace(/故本期/g, '所以本期')
+    .replace(/若/g, '如果')
+    .replace(/亦/g, '也')
+    .replace(/稍纾民力/g, '稍微减轻百姓负担')
+    .replace(/加派之权/g, '额外收费的权力')
+    .replace(/须待/g, '要等')
+    .replace(/底数既明/g, '底数查清')
+    .replace(/执行稍复/g, '执行能力有所恢复')
+    .replace(/再议/g, '再决定')
+    .replace(/岁入岁支实数/g, '实际收入和支出')
+    .replace(/隐没羡余/g, '隐瞒或多出的款项')
+    .replace(/径行加赋/g, '直接加税')
+    .replace(/登记造册/g, '登记成册')
+    .replace(/限期裁撤/g, '在规定期限内取消')
+    .replace(/专责/g, '专门负责')
+    .replace(/一季内/g, '三个月内')
+    .replace(/报中书/g, '向中书省报告')
+    .replace(/开查/g, '开始检查')
+    .replace(/富庶/g, '富裕')
+    .replace(/核出/g, '查出')
+    .replace(/督核/g, '监督核查')
+    .replace(/不得/g, '不能')
+    .replace(/号令反易壅滞/g, '命令反而更容易被耽搁')
+    .replace(/民力困敝/g, '百姓负担沉重')
+    .replace(/政令壅滞/g, '政令执行受阻')
+    .replace(/实支/g, '实际支出')
+    .replace(/虚估/g, '虚报估算')
+    .replace(/之数/g, '的数额')
+    .replace(/上供/g, '上交朝廷')
+    .replace(/^令/g, '让')
+    .replace(/逐项开列榜示/g, '逐项列出并公开')
+    .replace(/由监司抽验两路/g, '由监司抽查两个地区')
+    .replace(/凡无朝廷明文者即行停征/g, '没有朝廷正式文件依据的项目立即停止征收')
+    .replace(/一律/g, '全部')
+    .replace(/开列后择重处置/g, '列出后优先处理问题最严重的地区')
+    .replace(/正额/g, '规定数额')
+    .replace(/停罢无度者/g, '停止没有合理依据的项目')
+    .replace(/边警未至急迫/g, '边境警情还不紧急')
+    .replace(/宜顾主务/g, '应先保障主要任务')
+    .replace(/地方承载尚可/g, '地方目前还能承受')
+    .replace(/本期不宜叠加事务/g, '本期不再增加任务')
+    .replace(/不宜叠加事务/g, '不再增加任务')
+    .replace(/故以/g, '所以把');
+}
+
+function normalizeDecisionText(value: string): string {
+  const decision = modernizeAdvisorText(value).replace(/^须裁定[：:]?/, '需要决定：');
+  return /^需要决定[：:]/.test(decision) ? decision : `需要决定：${decision}`;
+}
+
 function clarifyAdvice(item: AdvisorAdvice['dimensions'][number], state: GameState | null): string {
-  if (item.role === '暂缓' || item.advice.length >= 48) return item.advice;
+  const plainAdvice = modernizeAdvisorText(item.advice);
+  if (item.role === '暂缓' || plainAdvice.length >= 48) return plainAdvice;
   const value = state ? item.name === '财政' ? state.indicators.finance : item.name === '民生' ? state.indicators.livelihood : item.name === '军事' ? state.indicators.defense : state.indicators.execution : null;
   const context = value === null ? '' : `${item.name === '吏治' ? '执行' : item.name}${value}（${qualitative(value)}）。`;
-  const administrationExplanation = /追责|处分|黜陟|责任/.test(item.advice)
+  const administrationExplanation = /追责|处分|黜陟|责任/.test(plainAdvice)
     ? '具体是依据上期已经查明的案卷锁定责任官员，区分失察、包庇与擅改，再决定罢免、贬调或留任察看。'
-    : /积压|销案|未结/.test(item.advice)
+    : /积压|销案|未结/.test(plainAdvice)
       ? '具体是把尚未办结的州县事项逐件列册，标明承办人和逾期原因，优先清理已经查实的积压。'
-      : /复核|结案|成效/.test(item.advice)
+      : /复核|结案|成效/.test(plainAdvice)
         ? '具体是对照上期整改清单复查结果，只复核仍有疑点的州县，并将已经办妥的事项正式结案。'
         : '具体是让监司把诏令逐条对照州县收文、办理与结案记录，一月内查明哪一环积压或擅改。';
   const explanation = {
@@ -153,7 +246,7 @@ function clarifyAdvice(item: AdvisorAdvice['dimensions'][number], state: GameSta
     '军事': '具体是让陕西帅司分寨堡核对现有军粮与可支应日数，十日内报出最紧缺之处。',
     '吏治': administrationExplanation,
   }[item.name];
-  return item.advice.startsWith('续办') ? `${item.advice}${context}${explanation}` : `${context}${item.advice}${explanation}`;
+  return plainAdvice.startsWith('续办') ? `${plainAdvice}${context}${explanation}` : `${context}${plainAdvice}${explanation}`;
 }
 
 function renderAdvisorOutline(administration: number, dimensions: AdvisorAdvice['dimensions'], situation: string, recommendation?: AdvisorAdvice['personnelRecommendation']): string {
@@ -176,10 +269,10 @@ export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameSt
   const state = typeof stateOrAdministration === 'number' ? null : stateOrAdministration;
   const administration = typeof stateOrAdministration === 'number' ? stateOrAdministration : stateOrAdministration.resources.administration;
   if (Array.isArray(advice.dimensions) && advice.dimensions.length) {
-    const dimensions = advice.dimensions.map((item) => ({ ...item, advice: clarifyAdvice(item, state), decision: item.decision || decisionFor(item.name, item.role) }));
+    const dimensions = advice.dimensions.map((item) => ({ ...item, advice: clarifyAdvice(item, state), decision: item.decision ? normalizeDecisionText(item.decision) : decisionFor(item.name, item.role) }));
     const mainName = dimensions.find((item) => item.role === '主')?.name ?? '财政';
     const supportName = dimensions.find((item) => item.role === '辅')?.name ?? '民生';
-    const situation = typeof advice.situation === 'string' && advice.situation.trim() ? advice.situation.trim() : fallbackSituation(state, mainName, supportName, event);
+    const situation = typeof advice.situation === 'string' && advice.situation.trim() ? modernizeAdvisorText(advice.situation.trim()) : fallbackSituation(state, mainName, supportName, event);
     const personnelRecommendation = recommendPersonnel(state, mainName);
     const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : '本期无合适的未任候选人。';
     return { outline: renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation), situation, dimensions, personnel, personnelRecommendation, policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId) };
@@ -245,7 +338,6 @@ export const providerDefaults: Record<AIConfig['provider'], Omit<AIConfig, 'prov
 };
 
 export async function interpretEdictRemote(edict: string, context: unknown, config: AIConfig): Promise<EdictInterpretation> {
-  if (isAdvisorOutline(edict)) return parseEdict(edict);
   const response = await fetch(apiUrl('/api/interpret'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ edict, context, config }),
