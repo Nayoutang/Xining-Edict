@@ -79,7 +79,10 @@ describe('辅政官响应协议兼容', () => {
       dimensions: [{ name: '财政', scope: '国库', role: '主', advice: '处理当前困境。', policyId: 'cross-check-ledgers' }],
     }, state);
 
-    expect(result.routes).toHaveLength(2);
-    expect(result.policyIds).toEqual(['cross-check-ledgers', 'reduce-redundant-spending']);
+    expect(result.routes?.filter((route) => route.dilemmaTitle === dilemmaTitle)).toHaveLength(2);
+    for (const dilemma of state.dilemmas) {
+      expect(result.routes?.some((route) => route.dilemmaTitle === dilemma.title)).toBe(true);
+    }
+    expect(result.policyIds).toEqual(expect.arrayContaining(['cross-check-ledgers', 'reduce-redundant-spending']));
   });
 });

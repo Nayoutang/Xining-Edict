@@ -117,8 +117,9 @@ describe('AI史实推理边界', () => {
     expect(prompt).toContain('当前困境优先序');
     expect(prompt).toContain('分析对象只能是当前困境列表');
     expect(prompt).toContain('禁止分析、比较、引用或输出财用、民生、边备、士论、执行五项国势');
-    expect(prompt).toContain('二至三条可替代的施政路线');
+    expect(prompt).toContain('每一个困境都必须出现在 routes 中');
     expect(prompt).toContain('每条路线只绑定一个现有政务ID');
+    expect(prompt).toContain('不得因资源不足省略任何困境');
     expect(prompt).toContain('每个维度最多一条施政建议，严禁面面俱到');
     expect(prompt).toContain('当前固定官署与任职');
     expect(prompt).toContain('玩家需裁定什么');
