@@ -103,6 +103,10 @@ button { font: inherit; }
 .advisor-question button:hover,.advisor-draft button:hover { background: #8f392d; }
 .advisor-error { display: block; margin-top: 9px; border-left: 3px solid #a33c2e; background: #f3dfd6; padding: 8px; color: #8b3126; font-size: 11px; }
 .advisor-answer { margin-top: 12px; border-top: 1px solid #d8cbb1; padding-top: 12px; }
+.advisor-workspace > header,
+.advisor-workspace > p,
+.advisor-answer,
+.advisor-adopt { user-select: none; -webkit-user-select: none; }
 .advisor-answer h4 { margin: 0 0 6px; color: #83342a; font: 14px SimSun,serif; }
 .advisor-answer>p { margin: 0; color: #504a40; font-size: 12px; line-height: 1.75; }
 .advisor-routes { display: grid; gap: 6px; margin: 10px 0; }
