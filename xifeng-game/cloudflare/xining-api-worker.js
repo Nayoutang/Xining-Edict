@@ -136,14 +136,6 @@ function conciseSentence(value, fallback, maxLength = 72) {
   const clipped = firstSentence.length > maxLength ? `${firstSentence.slice(0, maxLength - 1).replace(/[，、；：]$/, "")}\u3002` : firstSentence;
   return /[。！？]$/.test(clipped) ? clipped : `${clipped}\u3002`;
 }
-function qualitative(value) {
-  const number = Number(value);
-  if (number < 30) return "\u5371\u6025";
-  if (number < 45) return "\u504F\u4F4E";
-  if (number < 60) return "\u5C1A\u53EF";
-  return "\u7A33\u56FA";
-}
-var advisorIndicatorLabels = { finance: "\u8D22\u7528", livelihood: "\u6C11\u751F", defense: "\u8FB9\u5907", courtSupport: "\u58EB\u8BBA", execution: "\u6267\u884C" };
 var advisorPersonnelTargets = {
   "\u8D22\u653F": { officeKey: "finance", officerIds: ["zeng-bu", "su-zhe", "lv-huiqing"] },
   "\u6C11\u751F": { officeKey: "transport", officerIds: ["fan-chunren", "su-shi", "cheng-hao"] },
@@ -151,28 +143,16 @@ var advisorPersonnelTargets = {
   "\u540F\u6CBB": { officeKey: "censorate", officerIds: ["sima-guang", "han-jiang", "lv-gongzhu"] }
 };
 function fallbackSituation(state, mainName, supportName, event) {
-  const indicators = state?.indicators || {};
   const dilemmas = [...state?.dilemmas || []].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
   const dilemmaText = dilemmas.length ? dilemmas.map((item) => `${item.title}\uFF08\u4E25\u91CD\u5EA6${item.severity}\uFF09`).join("\u3001") : "\u5F53\u524D\u6CA1\u6709\u663E\u8457\u56F0\u5883";
-  const ranked = Object.entries(advisorIndicatorLabels).map(([key, label]) => ({ key, label, value: Number(indicators[key] ?? 0) })).sort((left, right) => left.value - right.value);
-  const weakest = ranked.slice(0, 2).map((item) => `${item.label}${item.value}\uFF08${qualitative(item.value)}\uFF09`).join("\u3001");
-  const previous = state?.history?.at?.(-1);
-  const trend = previous ? ranked.slice(0, 2).map((item) => {
-    const delta = Number(previous?.indicatorChanges?.[item.key] || 0);
-    return `${item.label}${delta > 0 ? "\u56DE\u5347" : delta < 0 ? "\u4E0B\u6ED1" : "\u6301\u5E73"}${delta ? Math.abs(delta) : ""}`;
-  }).join("\u3001") : "\u5C1A\u65E0\u4E0A\u671F\u7ED3\u7B97\u53EF\u4F9B\u6BD4\u8F83";
   const turn = Math.max(1, Number(state?.turn || 1));
   const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
-  const eventText = event?.title ? `\u672C\u56DE\u6025\u52A1\u662F\u201C${event.title}\u201D\uFF1A${event.description || "\u8BE6\u60C5\u672A\u8F7D"}` : "\u672C\u56DE\u6025\u52A1\u5C1A\u5F85\u7ED3\u5408\u5FA1\u6848\u4E8B\u4EF6\u5224\u65AD";
-  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u5F53\u524D\u4F18\u5148\u56F0\u5883\u662F${dilemmaText}\u3002${eventText}\u3002\u56FD\u52BF\u4EC5\u4F5C\u627F\u8F7D\u8FB9\u754C\uFF1A${weakest}\uFF1B${trend}\u3002\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF0C\u672C\u671F\u4E3B\u9879\uFF1A${mainName || "\u65E0"}\uFF1B\u8F85\u9879\uFF1A${supportName || "\u65E0"}\u3002`;
+  const eventText = event?.title && dilemmas.some((item) => item?.title === event.title) ? `\u672C\u56DE\u65B0\u589E\u56F0\u5883\u662F\u201C${event.title}\u201D\u3002` : "";
+  return `\u73B0\u5904\u7B2C${turn}/${maxTurns}\u56DE\u7684${stageForTurn(turn, maxTurns)}\u3002\u5F53\u524D\u56F0\u5883\u6309\u4E25\u91CD\u5EA6\u6392\u5E8F\u4E3A${dilemmaText}\u3002${eventText}\u65BD\u653F\u53EA\u80FD\u56F4\u7ED5\u8FD9\u4E9B\u56F0\u5883\u5C55\u5F00\u3002\u53EF\u7528\u8D44\u6E90\u4E3A\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F\u3001\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\u3001\u884C\u653F${state?.resources?.administration ?? "\u672A\u77E5"}/50\uFF1B\u672C\u671F\u4E3B\u9879\uFF1A${mainName || "\u65E0"}\uFF1B\u8F85\u9879\uFF1A${supportName || "\u65E0"}\u3002`;
 }
 function normalizeSituation(value, state, mainName, supportName, event) {
-  const cleaned = modernizeAdvisorText(value).replace(/[\r\n|]+/g, "\uFF0C").trim();
-  const base = cleaned || fallbackSituation(state, mainName, supportName, event);
-  const priorities = [...state?.dilemmas || []].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
-  const fullyGrounded = priorities.slice(0, 2).every((item) => base.includes(item.title) && base.includes(String(item.severity)));
-  const grounded = priorities.length && !fullyGrounded ? `\u5F53\u524D\u56F0\u5883\u6309\u4E25\u91CD\u5EA6\u6392\u5E8F\u4E3A${priorities.map((item) => `${item.title}${item.severity}`).join("\u3001")}\uFF1B\u65BD\u653F\u5148\u540E\u4EE5\u6B64\u4E3A\u51C6\uFF0C\u56FD\u52BF\u6570\u503C\u53EA\u5224\u65AD\u80FD\u5426\u627F\u53D7\u3002${base}` : base;
-  return grounded.slice(0, 320);
+  void value;
+  return fallbackSituation(state, mainName, supportName, event).slice(0, 320);
 }
 function decisionFor(name, role, value) {
   if (role === "\u6682\u7F13") return "";
@@ -313,7 +293,6 @@ async function adviseWithAI({ question, currentEdict = "", state = {}, event = {
 \u5F53\u524D\u65F6\u95F4\uFF1A${formatDate(state?.date)}
 \u5F53\u524D\u56DE\u5408\uFF1A\u7B2C${currentTurn}/${maxTurns}\u56DE\uFF1B\u8DDD\u7EC8\u5C40\u5C1A\u4F59${remainingTurns}\u56DE\uFF1B\u9636\u6BB5\uFF1A${stage}
 \u5F53\u524D\u56F0\u5883\u4F18\u5148\u5E8F\uFF08\u65BD\u653F\u6392\u5E8F\u9996\u5148\u4F9D\u636E\u4E25\u91CD\u5EA6\uFF09\uFF1A${JSON.stringify(rankedDilemmas)}
-\u4E94\u9879\u56FD\u52BF\uFF08\u53EA\u4F5C\u4E3A\u5931\u8D25\u754C\u9650\u3001\u98CE\u9669\u6761\u4EF6\u4E0E\u627F\u8F7D\u80FD\u529B\uFF0C\u4E0D\u4F5C\u4E3A\u65BD\u653F\u4F18\u5148\u7EA7\uFF09\uFF1A\u8D22\u7528${state?.indicators?.finance ?? "\u672A\u77E5"}\uFF0C\u6C11\u751F${state?.indicators?.livelihood ?? "\u672A\u77E5"}\uFF0C\u8FB9\u5907${state?.indicators?.defense ?? "\u672A\u77E5"}\uFF0C\u58EB\u8BBA${state?.indicators?.courtSupport ?? "\u672A\u77E5"}\uFF0C\u6267\u884C${state?.indicators?.execution ?? "\u672A\u77E5"}
 \u5F53\u524D\u4F59\u91CF\uFF1A\u884C\u653F${administrativeRemaining}/${administrativeCapacity}\uFF0C\u653F\u7565${state?.resources?.politicalCapital ?? "\u672A\u77E5"}\uFF0C\u56FD\u5E93${state?.resources?.treasury ?? "\u672A\u77E5"}\u4E07\u8D2F
 \u5F53\u524D\u56FD\u7B56\u6210\u679C\uFF08\u5DF2\u5B8C\u6210\uFF09\uFF1A${completedObjectives.length ? completedObjectives.join("\u3001") : "\u6682\u65E0"}
 \u8FDB\u884C\u4E2D\u4E8B\u9879\uFF1A${activeItems.length ? JSON.stringify(activeItems) : "\u6682\u65E0"}
@@ -330,7 +309,7 @@ ${formatHistory(state?.history || [])}
 
 \u6700\u7EC8\u663E\u793A\u6587\u672C\u5FC5\u987B\u4E25\u683C\u7B49\u4EF7\u4E8E\u4EE5\u4E0B\u683C\u5F0F\uFF0C\u884C\u653F\u4F59\u91CF\u4F7F\u7528\u5F53\u524D\u5B9E\u6570 ${administrativeRemaining}/${administrativeCapacity}\uFF1A
 \u5C40\u52BF\u7814\u5224:
-\u7528\u4E09\u81F3\u56DB\u53E5\u73B0\u4EE3\u767D\u8BDD\u8BF4\u660E\u6700\u7D27\u8FEB\u56F0\u5883\u53CA\u4E25\u91CD\u5EA6\u3001\u76F8\u5173\u56FD\u52BF\u5B9E\u6570\u3001\u4E0A\u671F\u8D8B\u52BF\u3001\u672C\u671F\u4E8B\u4EF6\u3001\u8D44\u6E90\u80FD\u627F\u62C5\u4EC0\u4E48\uFF0C\u4EE5\u53CA\u5404\u9879\u4F18\u5148\u7EA7\u7684\u4F9D\u636E\u3002\u56F0\u5883\u4E25\u91CD\u5EA6\u8D8A\u9AD8\u8D8A\u5371\u9669\uFF0C\u56FD\u52BF\u6570\u503C\u8D8A\u4F4E\u8D8A\u8584\u5F31\uFF0C\u4E0D\u5F97\u6DF7\u6DC6\u3002
+\u53EA\u8BF4\u660E\u5F53\u524D\u56F0\u5883\u3001\u4E25\u91CD\u5EA6\u3001\u56F0\u5883\u4E4B\u95F4\u7684\u5148\u540E\u5173\u7CFB\u3001\u672C\u671F\u4E8B\u4EF6\u548C\u8D44\u6E90\u80FD\u627F\u62C5\u4EC0\u4E48\u3002\u7981\u6B62\u5206\u6790\u3001\u6BD4\u8F83\u6216\u63D0\u53CA\u8D22\u7528\u3001\u6C11\u751F\u3001\u8FB9\u5907\u3001\u58EB\u8BBA\u3001\u6267\u884C\u4E94\u9879\u56FD\u52BF\u6570\u503C\u3002
 
 \u884C\u653F\u4F59\u91CF:${administrativeRemaining}/${administrativeCapacity}
 
@@ -363,7 +342,7 @@ ${formatHistory(state?.history || [])}
 }`;
   const system = `\u4F60\u662F\u5386\u53F2\u7B56\u7565\u6E38\u620F\u300A\u7199\u5B81\u6289\u62E9\u300B\u7684\u8F85\u653F\u5B98\uFF0C\u4E0D\u662F\u63A8\u6F14\u53F2\u5B98\u3002
 1. \u4F60\u53EA\u80FD\u5728\u9881\u8BCF\u524D\u63D0\u4F9B\u63D0\u7EB2\uFF0C\u4E25\u7981\u751F\u6210\u53EF\u76F4\u63A5\u9881\u884C\u7684\u5B8C\u6574\u8BCF\u4E66\uFF0C\u4E0D\u80FD\u58F0\u79F0\u653F\u7B56\u5DF2\u7ECF\u5B9E\u65BD\u3002
-2. \u5FC5\u987B\u5148\u6309\u5F53\u524D\u56F0\u5883\u4E25\u91CD\u5EA6\u51B3\u5B9A\u65BD\u653F\u5148\u540E\uFF0C\u518D\u7528\u56FD\u52BF\u548C\u8D44\u6E90\u5224\u65AD\u98CE\u9669\u4E0E\u53EF\u6267\u884C\u6027\uFF1B\u4E0D\u5F97\u628A\u6700\u5F31\u56FD\u52BF\u76F4\u63A5\u5F53\u6210\u6700\u9AD8\u4F18\u5148\u7EA7\u3002\u4E3B\u8F85\u6570\u91CF\u4E0D\u56FA\u5B9A\uFF0C\u5141\u8BB8\u591A\u4E2A\u4E3B\u9879\u3001\u6CA1\u6709\u8F85\u9879\u6216\u5168\u90E8\u6682\u7F13\u3002
+2. \u5206\u6790\u5BF9\u8C61\u53EA\u80FD\u662F\u5F53\u524D\u56F0\u5883\u5217\u8868\uFF1B\u5FC5\u987B\u6309\u56F0\u5883\u4E25\u91CD\u5EA6\u51B3\u5B9A\u65BD\u653F\u5148\u540E\u3002\u7981\u6B62\u5206\u6790\u3001\u6BD4\u8F83\u3001\u5F15\u7528\u6216\u8F93\u51FA\u8D22\u7528\u3001\u6C11\u751F\u3001\u8FB9\u5907\u3001\u58EB\u8BBA\u3001\u6267\u884C\u4E94\u9879\u56FD\u52BF\u3002\u8D44\u6E90\u53EA\u7528\u4E8E\u5224\u65AD\u80FD\u5426\u6267\u884C\u3002\u4E3B\u8F85\u6570\u91CF\u4E0D\u56FA\u5B9A\uFF0C\u5141\u8BB8\u591A\u4E2A\u4E3B\u9879\u3001\u6CA1\u6709\u8F85\u9879\u6216\u5168\u90E8\u6682\u7F13\u3002
 3. \u5C0A\u91CD\u7199\u5B81\u3001\u5143\u4E30\u65F6\u671F\u7684\u673A\u6784\u3001\u8D44\u6E90\u548C\u653F\u6CBB\u8BED\u8A00\u3002
 4. \u56FA\u5B9A\u5217\u51FA\u8D22\u653F\u3001\u6C11\u751F\u3001\u519B\u4E8B\u3001\u540F\u6CBB\u56DB\u9879\u4E14\u987A\u5E8F\u4E0D\u53EF\u6539\u53D8\uFF0C\u4E0D\u65B0\u589E\u5236\u5EA6\u3001\u4EFB\u514D\u3001\u5916\u4EA4\u7B49\u7EF4\u5EA6\u3002
 5. \u53EF\u5F15\u7528\u4EBA\u7269\u7ACB\u573A\uFF0C\u4F46\u4E0D\u5F97\u628A\u4EBA\u7269\u7B80\u5355\u5224\u4E3A\u5FE0\u81E3\u6216\u5978\u81E3\u3002

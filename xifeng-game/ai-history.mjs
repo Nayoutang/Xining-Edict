@@ -220,33 +220,17 @@ const advisorPersonnelTargets = {
 };
 
 function fallbackSituation(state, mainName, supportName, event) {
-  const indicators = state?.indicators || {};
   const dilemmas = [...(state?.dilemmas || [])].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
   const dilemmaText = dilemmas.length ? dilemmas.map((item) => `${item.title}（严重度${item.severity}）`).join('、') : '当前没有显著困境';
-  const ranked = Object.entries(advisorIndicatorLabels)
-    .map(([key, label]) => ({ key, label, value: Number(indicators[key] ?? 0) }))
-    .sort((left, right) => left.value - right.value);
-  const weakest = ranked.slice(0, 2).map((item) => `${item.label}${item.value}（${qualitative(item.value)}）`).join('、');
-  const previous = state?.history?.at?.(-1);
-  const trend = previous ? ranked.slice(0, 2).map((item) => {
-    const delta = Number(previous?.indicatorChanges?.[item.key] || 0);
-    return `${item.label}${delta > 0 ? '回升' : delta < 0 ? '下滑' : '持平'}${delta ? Math.abs(delta) : ''}`;
-  }).join('、') : '尚无上期结算可供比较';
   const turn = Math.max(1, Number(state?.turn || 1));
   const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
-  const eventText = event?.title ? `本回急务是“${event.title}”：${event.description || '详情未载'}` : '本回急务尚待结合御案事件判断';
-  return `现处第${turn}/${maxTurns}回的${stageForTurn(turn, maxTurns)}。当前优先困境是${dilemmaText}。${eventText}。国势仅作承载边界：${weakest}；${trend}。国库${state?.resources?.treasury ?? '未知'}万贯、政略${state?.resources?.politicalCapital ?? '未知'}、行政${state?.resources?.administration ?? '未知'}/50，本期主项：${mainName || '无'}；辅项：${supportName || '无'}。`;
+  const eventText = event?.title && dilemmas.some((item) => item?.title === event.title) ? `本回新增困境是“${event.title}”。` : '';
+  return `现处第${turn}/${maxTurns}回的${stageForTurn(turn, maxTurns)}。当前困境按严重度排序为${dilemmaText}。${eventText}施政只能围绕这些困境展开。可用资源为国库${state?.resources?.treasury ?? '未知'}万贯、政略${state?.resources?.politicalCapital ?? '未知'}、行政${state?.resources?.administration ?? '未知'}/50；本期主项：${mainName || '无'}；辅项：${supportName || '无'}。`;
 }
 
 function normalizeSituation(value, state, mainName, supportName, event) {
-  const cleaned = modernizeAdvisorText(value).replace(/[\r\n|]+/g, '，').trim();
-  const base = cleaned || fallbackSituation(state, mainName, supportName, event);
-  const priorities = [...(state?.dilemmas || [])].sort((left, right) => Number(right?.severity || 0) - Number(left?.severity || 0)).slice(0, 3);
-  const fullyGrounded = priorities.slice(0, 2).every((item) => base.includes(item.title) && base.includes(String(item.severity)));
-  const grounded = priorities.length && !fullyGrounded
-    ? `当前困境按严重度排序为${priorities.map((item) => `${item.title}${item.severity}`).join('、')}；施政先后以此为准，国势数值只判断能否承受。${base}`
-    : base;
-  return grounded.slice(0, 320);
+  void value;
+  return fallbackSituation(state, mainName, supportName, event).slice(0, 320);
 }
 
 function decisionFor(name, role, value) {
@@ -399,7 +383,6 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 当前时间：${formatDate(state?.date)}
 当前回合：第${currentTurn}/${maxTurns}回；距终局尚余${remainingTurns}回；阶段：${stage}
 当前困境优先序（施政排序首先依据严重度）：${JSON.stringify(rankedDilemmas)}
-五项国势（只作为失败界限、风险条件与承载能力，不作为施政优先级）：财用${state?.indicators?.finance ?? '未知'}，民生${state?.indicators?.livelihood ?? '未知'}，边备${state?.indicators?.defense ?? '未知'}，士论${state?.indicators?.courtSupport ?? '未知'}，执行${state?.indicators?.execution ?? '未知'}
 当前余量：行政${administrativeRemaining}/${administrativeCapacity}，政略${state?.resources?.politicalCapital ?? '未知'}，国库${state?.resources?.treasury ?? '未知'}万贯
 当前国策成果（已完成）：${completedObjectives.length ? completedObjectives.join('、') : '暂无'}
 进行中事项：${activeItems.length ? JSON.stringify(activeItems) : '暂无'}
@@ -416,7 +399,7 @@ ${formatHistory(state?.history || [])}
 
 最终显示文本必须严格等价于以下格式，行政余量使用当前实数 ${administrativeRemaining}/${administrativeCapacity}：
 局势研判:
-用三至四句现代白话说明最紧迫困境及严重度、相关国势实数、上期趋势、本期事件、资源能承担什么，以及各项优先级的依据。困境严重度越高越危险，国势数值越低越薄弱，不得混淆。
+只说明当前困境、严重度、困境之间的先后关系、本期事件和资源能承担什么。禁止分析、比较或提及财用、民生、边备、士论、执行五项国势数值。
 
 行政余量:${administrativeRemaining}/${administrativeCapacity}
 
@@ -449,7 +432,7 @@ ${formatHistory(state?.history || [])}
 }`;
   const system = `你是历史策略游戏《熙宁抉择》的辅政官，不是推演史官。
 1. 你只能在颁诏前提供提纲，严禁生成可直接颁行的完整诏书，不能声称政策已经实施。
-2. 必须先按当前困境严重度决定施政先后，再用国势和资源判断风险与可执行性；不得把最弱国势直接当成最高优先级。主辅数量不固定，允许多个主项、没有辅项或全部暂缓。
+2. 分析对象只能是当前困境列表；必须按困境严重度决定施政先后。禁止分析、比较、引用或输出财用、民生、边备、士论、执行五项国势。资源只用于判断能否执行。主辅数量不固定，允许多个主项、没有辅项或全部暂缓。
 3. 尊重熙宁、元丰时期的机构、资源和政治语言。
 4. 固定列出财政、民生、军事、吏治四项且顺序不可改变，不新增制度、任免、外交等维度。
 5. 可引用人物立场，但不得把人物简单判为忠臣或奸臣。

@@ -64,6 +64,7 @@ describe('辅政官响应协议兼容', () => {
 
     expect(result.situation).toContain(top.title);
     expect(result.situation).toContain(String(top.severity));
-    expect(result.situation).toContain('国势数值只判断能否承受');
+    expect(result.situation).toContain('施政只能围绕这些困境展开');
+    expect(result.situation).not.toContain('当前最弱的是执行');
   });
 });

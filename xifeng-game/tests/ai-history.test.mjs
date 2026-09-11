@@ -115,7 +115,8 @@ describe('AI史实推理边界', () => {
     expect(prompt).toContain('主辅数量不固定');
     expect(prompt).not.toContain('恰好一项');
     expect(prompt).toContain('当前困境优先序');
-    expect(prompt).toContain('不得把最弱国势直接当成最高优先级');
+    expect(prompt).toContain('分析对象只能是当前困境列表');
+    expect(prompt).toContain('禁止分析、比较、引用或输出财用、民生、边备、士论、执行五项国势');
     expect(prompt).toContain('每个维度最多一条施政建议，严禁面面俱到');
     expect(prompt).toContain('当前固定官署与任职');
     expect(prompt).toContain('玩家需裁定什么');
@@ -237,7 +238,7 @@ describe('AI史实推理边界', () => {
     expect(new Set(activeAdvice).size).toBe(1);
     for (const suggestions of adviceByDimension.values()) expect(suggestions.size).toBe(1);
     expect(lastPrompt).toContain('当前回合：第8/8回；距终局尚余1回；阶段：后期');
-    expect(lastPrompt).toContain('五项国势（只作为失败界限、风险条件与承载能力，不作为施政优先级）：财用48，民生46，边备50，士论34，执行43');
+    expect(lastPrompt).not.toContain('五项国势（');
     expect(lastPrompt).toContain('进行中事项');
     expect(lastPrompt).toContain('第7回核账恤民诏');
     expect(lastPrompt).toContain('国势变化');
