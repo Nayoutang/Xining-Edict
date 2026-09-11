@@ -151,6 +151,31 @@ export interface DilemmaProgress {
   reformDirection: string;
 }
 
+export type PolicyExecutionStatus = '顺利推进' | '部分落实' | '执行受阻';
+
+export interface PolicyExecutionOutcome {
+  policyId: string;
+  policyName: string;
+  status: PolicyExecutionStatus;
+  indicatorChanges: NumericChanges<IndicatorKey>;
+  resourceChanges: NumericChanges<ResourceKey>;
+  result: string;
+  blockers: string[];
+  unresolved: string;
+  nextStep: string;
+}
+
+export interface TurnNarrativeArchive {
+  report: string;
+  situationUpdate: string;
+  implementation: Array<{ stage: string; text: string }>;
+  reactions: Array<{ label: string; text: string }>;
+  nominations: Array<{ name: string; role: string; stance: string; assessment: string }>;
+  institutionalChanges: string[];
+  nextWarnings: string[];
+  historicalNote: string;
+}
+
 export interface TurnRecord {
   turn: number;
   date: GameDate;
@@ -161,9 +186,11 @@ export interface TurnRecord {
   resourceChanges: NumericChanges<ResourceKey>;
   administrativeOverload: number;
   politicalOverdraft: number;
+  policyOutcomes?: PolicyExecutionOutcome[];
   courtEffects?: string[];
   edictText?: string;
   aiSummary?: string;
+  narrative?: TurnNarrativeArchive;
 }
 
 export interface Ending {

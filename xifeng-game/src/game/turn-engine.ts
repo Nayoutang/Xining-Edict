@@ -9,6 +9,7 @@ import type {
   GameState,
   IndicatorKey,
   NumericChanges,
+  PolicyExecutionOutcome,
   ResourceKey,
   TurnDecision,
   TurnResult,
@@ -79,6 +80,51 @@ function applyRoutineRecovery(state: GameState): void {
   state.resources.politicalCapital += getPoliticalCapitalRecovery(state.indicators.courtSupport);
 }
 
+const indicatorNames: Record<IndicatorKey, string> = {
+  finance: '财用', livelihood: '民生', defense: '边备', courtSupport: '士论', execution: '执行',
+};
+
+function describeChanges(changes: NumericChanges<IndicatorKey>): string {
+  const entries = Object.entries(changes) as [IndicatorKey, number][];
+  return entries.length
+    ? entries.map(([key, value]) => `${indicatorNames[key]}${value > 0 ? '改善' : '受损'}${Math.abs(value)}`).join('、')
+    : '国势暂未出现直接变化';
+}
+
+function executionOutcome(
+  policy: NonNullable<ReturnType<typeof getPolicy>>,
+  indicatorChanges: NumericChanges<IndicatorKey>,
+  resourceChanges: NumericChanges<ResourceKey>,
+  riskDescriptions: string[],
+  administrativeOverload: number,
+  politicalOverdraft: number,
+  executionBefore: number,
+): PolicyExecutionOutcome {
+  const blockers = [
+    ...riskDescriptions,
+    ...(administrativeOverload > 0 ? [`行政余量不足，超载${administrativeOverload}`] : []),
+    ...(politicalOverdraft > 0 ? [`政略不足，透支${politicalOverdraft}`] : []),
+    ...(executionBefore < 40 ? ['地方执行基础偏弱，政令在州县容易延宕或变形'] : []),
+  ];
+  const status: PolicyExecutionOutcome['status'] = administrativeOverload > 0 || politicalOverdraft > 0
+    ? '执行受阻'
+    : blockers.length ? '部分落实' : '顺利推进';
+  const nextStep = status === '顺利推进'
+    ? `下回应复核“${policy.name}”实际成效，确认后再决定结案或扩大。`
+    : `下回应先处理“${policy.name}”的执行阻力，不宜原样重复颁令。`;
+  return {
+    policyId: policy.id,
+    policyName: policy.name,
+    status,
+    indicatorChanges,
+    resourceChanges,
+    result: `${policy.description}${describeChanges(indicatorChanges)}。`,
+    blockers,
+    unresolved: status === '顺利推进' ? '成效仍须经下一期奏报复核。' : blockers.join('；'),
+    nextStep,
+  };
+}
+
 export function settleTurn(currentState: GameState, decision: TurnDecision): TurnResult {
   validateDecision(currentState, decision);
   const state = structuredClone(currentState);
@@ -99,8 +145,13 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
   addChanges(state.indicators, event.effects);
   if (event.resourceEffects) addChanges(state.resources, event.resourceEffects);
 
+  const policyOutcomes: PolicyExecutionOutcome[] = [];
+
   for (const [index, policyId] of decision.policyIds.entries()) {
     const policy = getPolicy(policyId)!;
+    const policyIndicatorsBefore = { ...state.indicators };
+    const policyResourcesBefore = { ...state.resources };
+    const riskDescriptions: string[] = [];
     const adjustedCost = { ...policy.cost };
     adjustedCost.administration = Math.max(0, (adjustedCost.administration ?? 0) + courtSupports[index]!.administrationModifier);
     for (const key of resourceKeys) state.resources[key] -= adjustedCost[key] ?? 0;
@@ -115,13 +166,25 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
       const triggered = Object.entries(risk.whenIndicatorBelow ?? {}).every(
         ([key, threshold]) => state.indicators[key as IndicatorKey] < threshold,
       );
-      if (triggered) addChanges(state.indicators, risk.effects);
+      if (triggered) {
+        addChanges(state.indicators, risk.effects);
+        riskDescriptions.push(risk.description);
+      }
     }
 
     for (const flag of policy.grants) {
       if (!state.flags.includes(flag)) state.flags.push(flag);
     }
     state.activePolicies.push({ policyId, officerId: officer.id, remainingTurns: policy.duration });
+    policyOutcomes.push(executionOutcome(
+      policy,
+      difference(policyIndicatorsBefore, state.indicators),
+      difference(policyResourcesBefore, state.resources),
+      riskDescriptions,
+      administrativeOverload,
+      politicalOverdraft,
+      policyIndicatorsBefore.execution,
+    ));
   }
   state.resources.politicalCapital -= officer.politicalCostModifier;
 
@@ -154,6 +217,7 @@ export function settleTurn(currentState: GameState, decision: TurnDecision): Tur
     resourceChanges: difference(beforeResources, state.resources),
     administrativeOverload,
     politicalOverdraft,
+    policyOutcomes,
     courtEffects: courtSupports.map((support) => support.message).filter(Boolean),
     ...(decision.edictNote ? { edictText: decision.edictNote } : {}),
   };

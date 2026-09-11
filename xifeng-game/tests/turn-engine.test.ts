@@ -18,6 +18,14 @@ describe('半年回合结算', () => {
     expect(result.state.flags).toContain('green-sprouts-enacted');
     expect(result.state.activePolicies).toHaveLength(1);
     expect(result.record.edictText).toBe('诏试行青苗法。');
+    expect(result.record.policyOutcomes).toHaveLength(1);
+    expect(result.record.policyOutcomes?.[0]).toMatchObject({
+      policyId: 'green-sprouts-trial',
+      policyName: '青苗法试行',
+      status: '部分落实',
+    });
+    expect(result.record.policyOutcomes?.[0]?.blockers).toContain('执行力不足时，州县可能强制抑配。');
+    expect(result.record.policyOutcomes?.[0]?.nextStep).toContain('不宜原样重复颁令');
     expect(initial.turn).toBe(1);
   });
 
@@ -41,6 +49,7 @@ describe('半年回合结算', () => {
       officerId: 'wang-anshi',
     });
     expect(result.record.administrativeOverload).toBeGreaterThan(0);
+    expect(result.record.policyOutcomes?.every((outcome) => outcome.status === '执行受阻')).toBe(true);
     expect(result.state.history).toHaveLength(1);
     expect(result.state.dilemmas.some((item) => item.id === 'administrative-overload')).toBe(true);
   });

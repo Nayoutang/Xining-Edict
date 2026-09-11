@@ -244,6 +244,42 @@ describe('AI史实推理边界', () => {
     expect(lastPrompt).toContain('【暂缓】项只准说明“为何本期不做”');
   });
 
+  it('辅政官优先收到上一回的分项执行档案与完整后续警讯', async () => {
+    let prompt = '';
+    const fetchImpl = vi.fn(async (_url, options) => {
+      prompt = JSON.parse(options.body).messages.map((message) => message.content).join('\n');
+      return mockResponse({
+        dimensions: [
+          { name: '财政', role: '暂缓', advice: '财计尚可支应。', policyId: 'cross-check-ledgers' },
+          { name: '民生', role: '辅', advice: '续办，退还已查实的强敛钱物。', decision: '须裁定：先退重户还是先退灾户。', policyId: 'curb-local-exactions' },
+          { name: '军事', role: '暂缓', advice: '边情未见骤变。', policyId: 'northwest-defense' },
+          { name: '吏治', role: '主', advice: '续办，追究包庇属官的监司责任。', decision: '须裁定：先许自纠还是立即追责。', policyId: 'discipline-corrupt-officials' },
+        ],
+        situation: '上期抽验已经完成，本期应处理查明的阻力。', personnel: '',
+      });
+    });
+    await adviseWithAI({
+      state: {
+        turn: 2, maxTurns: 8,
+        indicators: { finance: 50, livelihood: 42, defense: 51, courtSupport: 40, execution: 38 },
+        resources: { treasury: 5600, politicalCapital: 45, administration: 40 },
+        history: [{
+          turn: 1, policyIds: ['curb-local-exactions'], indicatorChanges: { execution: 3 }, resourceChanges: { administration: -6 },
+          policyOutcomes: [{ policyId: 'curb-local-exactions', policyName: '整顿州县摊派', status: '部分落实', result: '三路抽验已经完成。', blockers: ['监司包庇属官'], unresolved: '责任官员尚未确定。', nextStep: '下回应依据案卷追究监司责任。' }],
+          narrative: { report: '查得两县擅改诏令。', implementation: [{ stage: '监司督察', text: '已经调取案卷。' }], nextWarnings: ['防止监司销毁案牍'] },
+        }],
+      },
+      config, fetchImpl,
+    });
+    expect(prompt).toContain('此前各回施政档案');
+    expect(prompt).toContain('整顿州县摊派【部分落实】');
+    expect(prompt).toContain('监司包庇属官');
+    expect(prompt).toContain('责任官员尚未确定');
+    expect(prompt).toContain('防止监司销毁案牍');
+    expect(prompt).toContain('下回应依据案卷追究监司责任');
+    expect(prompt).toContain('不得原样再提');
+  });
+
   it('各方回奏的第一句使用白话概括', async () => {
     const fetchImpl = vi.fn(async () => mockResponse({
       report: '州县奉诏施行。', situationUpdate: '财计稍定。', implementation: [],

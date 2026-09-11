@@ -140,11 +140,18 @@ function clarifyAdvice(item: AdvisorAdvice['dimensions'][number], state: GameSta
   if (item.role === '暂缓' || item.advice.length >= 48) return item.advice;
   const value = state ? item.name === '财政' ? state.indicators.finance : item.name === '民生' ? state.indicators.livelihood : item.name === '军事' ? state.indicators.defense : state.indicators.execution : null;
   const context = value === null ? '' : `${item.name === '吏治' ? '执行' : item.name}${value}（${qualitative(value)}）。`;
+  const administrationExplanation = /追责|处分|黜陟|责任/.test(item.advice)
+    ? '具体是依据上期已经查明的案卷锁定责任官员，区分失察、包庇与擅改，再决定罢免、贬调或留任察看。'
+    : /积压|销案|未结/.test(item.advice)
+      ? '具体是把尚未办结的州县事项逐件列册，标明承办人和逾期原因，优先清理已经查实的积压。'
+      : /复核|结案|成效/.test(item.advice)
+        ? '具体是对照上期整改清单复查结果，只复核仍有疑点的州县，并将已经办妥的事项正式结案。'
+        : '具体是让监司把诏令逐条对照州县收文、办理与结案记录，一月内查明哪一环积压或擅改。';
   const explanation = {
     '财政': '具体是让三司把账面数、实际入库数和未收数逐项对上，一月内列出差额与责任人。',
     '民生': '具体是让监司按户籍核对实际负担，查明哪些民户被加派、多收什么，一月内回报。',
     '军事': '具体是让陕西帅司分寨堡核对现有军粮与可支应日数，十日内报出最紧缺之处。',
-    '吏治': '具体是让监司把诏令逐条对照州县收文、办理与结案记录，一月内查明哪一环积压或擅改。',
+    '吏治': administrationExplanation,
   }[item.name];
   return item.advice.startsWith('续办') ? `${item.advice}${context}${explanation}` : `${context}${item.advice}${explanation}`;
 }

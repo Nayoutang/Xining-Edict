@@ -140,7 +140,10 @@ export function App() {
       } finally {
         if (showBusy) setAIBusy('');
       }
-      if (narrative) next.record.aiSummary = narrative.situationUpdate || narrative.report.slice(0, 240);
+      if (narrative) {
+        next.record.aiSummary = narrative.situationUpdate || narrative.report.slice(0, 240);
+        next.record.narrative = narrative;
+      }
       setDilemmaBaseline(state.dilemmas);
       setState(next.state);
       setResult({ event: next.event, record: next.record, ...(narrative ? { narrative } : {}), ...(aiError ? { aiError } : {}) });
@@ -573,8 +576,10 @@ function Records({ state }: { state: GameState }) {
       </header>
       {selected ? <div className="records-detail-scroll">
         <section><h3>本回纪要</h3><p>· {selected.aiSummary ? localizeDisplayText(selected.aiSummary) : `围绕「${selected.eventTitle}」颁行诏令，交付有司与州县施行。`}</p>{selected.administrativeOverload > 0 && <p>· 行政超载 {selected.administrativeOverload}，部分政令在传达中延宕变形。</p>}{selected.politicalOverdraft > 0 && <p>· 政略透支 {selected.politicalOverdraft}，诏令虽已颁行，但士论与执行受到额外损耗。</p>}</section>
+        {selected.policyOutcomes?.length ? <section><h3>政务执行</h3>{selected.policyOutcomes.map((outcome) => <p key={outcome.policyId}>· 【{outcome.status}】{outcome.policyName}：{outcome.result} 遗留：{outcome.unresolved}</p>)}</section> : null}
         <section><h3>颁行诏令</h3>{edictLines.length ? edictLines.map((line) => <p key={line}>· {line}。</p>) : <p>· 本回未留下诏令正文。</p>}</section>
         <section><h3>半年结算</h3><p>· {selected.eventTitle}</p>{selected.courtEffects?.map((item) => <p key={item}>· {item}</p>)}<div className="records-settlement">{settlement.length ? settlement.map((item) => <strong key={item}>{item}</strong>) : <span>诸项无显著变动</span>}</div></section>
+        {selected.narrative?.nextWarnings.length ? <section><h3>后续警讯</h3>{selected.narrative.nextWarnings.map((item) => <p key={item}>· {item}</p>)}</section> : null}
       </div> : <div className="records-unwritten"><BookOpenText /><strong>此回尚未载录</strong><p>待半年政务结算后，史官将在此补记诏令与朝局变化。</p></div>}
       <nav className="records-pagination" aria-label="起居注翻页">
         <button type="button" disabled={previousTurn === null} onClick={() => previousTurn !== null && setSelectedTurn(previousTurn)}>‹ <span>上一回</span></button>
@@ -722,7 +727,7 @@ function Result({ result, state, onClose }: {
     || (reformDilemmas.length
       ? reformDilemmas.map((item) => `${item.title}（严重度 ${item.severity}）`).join('；')
       : '本回施政未产生新的改革后遗，朝廷仍须继续观察州县落实与朝议变化。');
-  const implementation = narrative?.implementation.length
+  const narrativeImplementation = narrative?.implementation.length
     ? narrative.implementation
     : [
       { stage: '政令下达', text: `御前颁下诏书，交${officer?.name ?? '承办官'}据诏施行。` },
@@ -730,6 +735,12 @@ function Result({ result, state, onClose }: {
       { stage: '部司承办', text: result.record.administrativeOverload > 0 ? `有司承办超出行政能力 ${result.record.administrativeOverload}，部分文移发生延宕。` : '有关部司依限具牒，调拨钱粮并交监司覆核。' },
       { stage: '州县落实', text: result.record.politicalOverdraft > 0 ? `政略透支 ${result.record.politicalOverdraft}，地方执行伴随更多观望与抵牾。` : '监司下达州县，按本地情形施行并候期复奏。' },
     ];
+  const policyImplementation = (result.record.policyOutcomes ?? []).map((outcome) => ({
+    stage: outcome.policyName,
+    text: `${outcome.result}${outcome.blockers.length ? ` 阻力：${outcome.blockers.join('；')}。` : ''} ${outcome.nextStep}`,
+    status: outcome.status,
+  }));
+  const implementation = [...policyImplementation, ...narrativeImplementation.map((step) => ({ ...step, status: '已记录' }))].slice(0, 4);
   const reactions = (narrative?.reactions.length
     ? narrative.reactions.slice(0, 6)
     : [
@@ -792,7 +803,7 @@ function Result({ result, state, onClose }: {
           {implementation.slice(0, 4).map((step, index) => <article key={`${step.stage}-${index}`}>
             <i>{index + 1}</i>
             <div><strong>{step.stage}</strong><p>{step.text}</p></div>
-            <em>已毕</em>
+            <em>{step.status}</em>
           </article>)}
         </div>
         {narrative?.nextWarnings.length ? <section className="settlement-warnings"><strong>后续警讯</strong>{narrative.nextWarnings.slice(0, 2).map((item) => <p key={item}>· {item}</p>)}</section> : null}

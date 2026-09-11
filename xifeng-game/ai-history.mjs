@@ -218,6 +218,7 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
 
   const turn = Math.max(1, Math.min(8, Math.round(Number(state?.turn) || 1)));
   const previousPolicyIds = new Set((state?.history || []).flatMap((record) => record?.policyIds || []));
+  const documentedPolicyIds = new Set((state?.history || []).flatMap((record) => (record?.policyOutcomes || []).map((outcome) => outcome?.policyId).filter(Boolean)));
   const previousAdvice = (state?.advisorHistory || []).join('\n');
   const dimensions = advisorDimensions.map((definition) => {
     const item = byName.get(definition.name) || {};
@@ -229,8 +230,12 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
       ? pausedSentence(item?.advice, definition, turn, state?.indicators)
       : conciseSentence(item?.advice, fallback, 72);
     const repeatedSuggestion = role !== '暂缓' && previousAdvice.includes(advice.replace(/[。！？]$/, ''));
-    if (role !== '暂缓' && (previousPolicyIds.has(policyId) || repeatedSuggestion)) {
+    if (role !== '暂缓' && repeatedSuggestion) {
       advice = conciseSentence(previousPolicyIds.has(policyId) ? `续办，${fallback}` : fallback, fallback, 72);
+    } else if (role !== '暂缓' && previousPolicyIds.has(policyId) && !documentedPolicyIds.has(policyId)) {
+      advice = conciseSentence(`续办，${fallback}`, `续办，${fallback}`, 72);
+    } else if (role !== '暂缓' && previousPolicyIds.has(policyId) && !advice.startsWith('续办')) {
+      advice = conciseSentence(`续办，${advice}`, `续办，${fallback}`, 72);
     }
     return {
       name: definition.name,
@@ -341,7 +346,7 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 当前固定官署与任职（只能建议在现有岗位上改授或罢免，不得改设机构）：${JSON.stringify(state?.polity || {})}
 当前准备任用的执行官：${JSON.stringify(officer)}
 可执行政务及其本回合成本：${JSON.stringify(policyBudget)}
-此前各回诏令与结算（不得忽略）：
+此前各回施政档案（这是判断下一步的主要依据，不得忽略）：
 ${formatHistory(state?.history || [])}
 此前辅政官已提方向（不得原句重提）：${(state?.advisorHistory || []).slice(-6).join('\n') || '无。'}
 玩家案前已有文字：${String(currentEdict || '').trim() || '尚未落笔'}
@@ -368,7 +373,7 @@ ${formatHistory(state?.history || [])}
 
 四个维度必须全部列出，顺序固定为财政、民生、军事、吏治。【主】和【辅】各且仅出现一次，其余两项必须标【暂缓】。每个维度最多一条施政建议，严禁面面俱到。主辅项必须同时写明“问题在哪里”“谁去做什么”“多久回报”和“玩家需裁定什么”；不得只写“抽验三路”“调查实况”等无从下手的公文缩写。不得写“宜稳妥推进”“酌情办理”“视情况而定”等空话。铨选建议只能指向已有官署和官职，不得新建、撤并或改造政治架构；任免仅是建议，由玩家在铨选界面亲自操作。显示文本总长度控制在九百字以内。局势研判使用易懂白话，提纲保留克制的文言语感，不写骈句。
 
-不得重复此前回合已经提出或颁行的建议方向。若同一事务确须延续，必须以“续办”开头，并明确本期新增着力点，不得原句重述。建议必须针对本期数值短板与困境；士论偏低时须考虑缓和朝议或收窄推行力度。${stage === '前期' ? '当前为前期，重在核清底数与小范围试办。' : stage === '中期' ? '当前为中期，重在推行、核验与纠偏。' : '当前为后期，重在巩固成果、结清遗留与善后。'}【暂缓】项只准说明“为何本期不做”，严禁写任何动作、对象或期限。
+先阅读施政档案中的“执行状态、已见结果、阻力、遗留与下一步”，再决定本回建议。已经顺利推进的措施不得原样再提；部分落实或执行受阻的事项如需继续，必须以“续办”开头，直接处理档案中的遗留或阻力，并明确本期新增着力点。不得重复此前回合已经提出或颁行的建议方向，不得把换同义词当作新建议。建议还须结合本期数值短板与困境；士论偏低时须考虑缓和朝议或收窄推行力度。${stage === '前期' ? '当前为前期，重在核清底数与小范围试办。' : stage === '中期' ? '当前为中期，重在推行、核验与纠偏。' : '当前为后期，重在巩固成果、结清遗留与善后。'}【暂缓】项只准说明“为何本期不做”，严禁写任何动作、对象或期限。
 
 你须在内部核算政略、行政与国库成本：总政略成本还要加上执行官一次性的政略消耗修正；结算后须至少保留 12 点政略、10 点行政和 800 万贯国库。资源不足时，将高成本方向列为【暂缓】，不得堆叠政务伪装周全。只提出脚手架，不得输出诏书正文、制曰、奉诏、钦此等成稿措辞。
 
@@ -418,7 +423,7 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
 程序确认的全部变化：${JSON.stringify(record)}
 此前六回合档案：${formatHistory(history)}
 
-你的任务不是再次计算输赢，而是解释这些既定变化如何在北宋国家机器中发生。必须体现诏令由御前发出后，经过中书门下、三司或枢密院、监司、州县和胥吏的传递与变形；结合执行官的性格、行事方式、政治底线和语言风格。官员之间存在制度判断与利益冲突，不得写成忠臣与奸臣的简单对立。
+你的任务不是再次计算输赢，而是解释这些既定变化如何在北宋国家机器中发生。“程序确认的全部变化”内每项政务的执行状态、直接影响和阻力都是不可推翻的事实；report 与 implementation 必须逐项告知玩家该政务办成了什么、为何受阻、还留下什么，不得把【部分落实】或【执行受阻】写成圆满完成。必须体现诏令由御前发出后，经过中书门下、三司或枢密院、监司、州县和胥吏的传递与变形；结合执行官的性格、行事方式、政治底线和语言风格。官员之间存在制度判断与利益冲突，不得写成忠臣与奸臣的简单对立。
 
 每条各方回奏的 text 第一行必须先用一句不超过二十二字的现代白话直接说清“这对该方意味着什么”，再接制度细节；不得使用“直白说”“简单说”“说白了”等引导词，也不要一上来就写公文腔。
 
@@ -442,7 +447,7 @@ export async function narrateSettlementWithAI({ edict, stateBefore, stateAfter, 
 4. 具体体现中书门下、三司、枢密院、台谏、监司、州县、胥吏、豪强与百姓的不同反应。
 5. 如产生用人需求，只能举荐一至两名当时真实存在且与政务相关的人物；没有合适人选时返回空数组。
 6. 少作空泛褒贬，多写政令传递、资源调度、地方变通、受益者、受损者与长期隐患。
-7. AI只有叙事解释权；规则引擎是数值和困境状态的唯一裁判。
+7. AI只有叙事解释权；规则引擎是数值、困境与分项执行状态的唯一裁判。
 8. ${outputLanguageRule}`;
   const output = await callModel(config, system, prompt, fetchImpl);
   const parsed = parseJsonOutput(output);
@@ -600,7 +605,13 @@ function formatHistory(history) {
     const policies = (turn.policyIds || []).map((id) => allowedPolicies.find(([allowed]) => allowed === id)?.[1] || id).join('、') || '未识别';
     const indicatorChanges = localizeInternalTerms(JSON.stringify(turn.indicatorChanges || {}));
     const resourceChanges = localizeInternalTerms(JSON.stringify(turn.resourceChanges || {}));
-    return `第${turn.turn}回：核心诏令“${turn.edictText || '未录原文'}”；施行政务“${policies}”；国势变化${indicatorChanges}；余量变化${resourceChanges}；行政超载${turn.administrativeOverload || 0}、政略透支${turn.politicalOverdraft || 0}；结算“${turn.aiSummary || turn.eventTitle || '未录'}”`;
+    const outcomes = Array.isArray(turn.policyOutcomes) && turn.policyOutcomes.length
+      ? turn.policyOutcomes.map((outcome) => `${outcome.policyName || outcome.policyId}【${outcome.status || '未判'}】：已见结果“${outcome.result || '未录'}”；阻力“${(outcome.blockers || []).join('；') || '无显著阻力'}”；遗留“${outcome.unresolved || '未录'}”；后续“${outcome.nextStep || '未录'}”`).join('；')
+      : '旧档案未分项记录执行结果';
+    const narrative = turn.narrative
+      ? `史官详报“${turn.narrative.report || ''}”；各级施行“${(turn.narrative.implementation || []).map((item) => `${item.stage}:${item.text}`).join('；')}”；后续警讯“${(turn.narrative.nextWarnings || []).join('；') || '无'}”`
+      : `结算摘要“${turn.aiSummary || turn.eventTitle || '未录'}”`;
+    return `第${turn.turn}回：核心诏令“${turn.edictText || '未录原文'}”；施行政务“${policies}”；分项执行档案：${outcomes}；国势变化${indicatorChanges}；余量变化${resourceChanges}；行政超载${turn.administrativeOverload || 0}、政略透支${turn.politicalOverdraft || 0}；${narrative}`;
   }).join('\n');
 }
 
