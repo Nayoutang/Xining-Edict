@@ -31,6 +31,13 @@ export interface AdvisorAdvice {
     decision?: string | undefined;
     policyId: string;
   }>;
+  routes?: Array<{
+    title: string;
+    dilemmaTitle: string;
+    advice: string;
+    tradeoff: string;
+    policyId: string;
+  }>;
   personnel: string;
   personnelRecommendation?: {
     officeKey: string;
@@ -230,6 +237,13 @@ export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameSt
   const administration = typeof stateOrAdministration === 'number' ? stateOrAdministration : stateOrAdministration.resources.administration;
   if (Array.isArray(advice.dimensions) && advice.dimensions.length) {
     const dimensions = advice.dimensions.map((item) => ({ ...item, advice: modernizeAdvisorText(item.advice), decision: item.decision ? normalizeDecisionText(item.decision) : decisionFor(item.name, item.role) }));
+    const routes = Array.isArray(advice.routes) ? advice.routes.slice(0, 6).map((route) => ({
+      ...route,
+      title: modernizeAdvisorText(route.title),
+      dilemmaTitle: modernizeAdvisorText(route.dilemmaTitle),
+      advice: modernizeAdvisorText(route.advice),
+      tradeoff: modernizeAdvisorText(route.tradeoff),
+    })) : undefined;
     const mainName = dimensions.find((item) => item.role === '主')?.name;
     const rawSituation = typeof advice.situation === 'string' && advice.situation.trim() ? advice.situation.trim() : fallbackSituation(state, dimensions.filter((item) => item.role === '主').map((item) => item.name).join('、') || '无', dimensions.filter((item) => item.role === '辅').map((item) => item.name).join('、') || '无', event);
     const situation = (state
@@ -237,7 +251,7 @@ export function adaptAdvisorAdvice(value: unknown, stateOrAdministration: GameSt
       : groundSituationInDilemmas(rawSituation, state)).slice(0, 320);
     const personnelRecommendation = mainName ? recommendPersonnel(state, mainName) : undefined;
     const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : '本期无合适的未任候选人。';
-    return { outline: renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation), situation, dimensions, personnel, personnelRecommendation, policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId) };
+    return { outline: renderAdvisorOutline(administration, dimensions, situation, personnelRecommendation), situation, dimensions, ...(routes ? { routes } : {}), personnel, personnelRecommendation, policyIds: [...new Set((routes?.length ? routes.map((item) => item.policyId) : dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId)))] };
   }
   throw new Error('辅政官响应缺少分维度建议，请更新 AI 服务后重新参详。');
 }

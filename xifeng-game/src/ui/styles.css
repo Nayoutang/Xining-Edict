@@ -126,6 +126,12 @@ button { font: inherit; }
 .advisor-dimensions article > small { display: block; margin-top: 2px; color: #795b3f; line-height: 1.6; }
 .advisor-draft .advisor-item-adopt { width: auto; flex: 0 0 auto; border: 0; background: transparent; color: #87392d; padding: 1px 4px; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .advisor-draft .advisor-item-adopt:hover,.advisor-draft .advisor-item-adopt:focus-visible { background: transparent; color: #b04434; }
+.advisor-routes { display: grid; gap: 9px; }
+.advisor-routes > strong { color: #74382d; }
+.advisor-routes article { border-left: 2px solid #9b7c4f80; padding-left: 8px; }
+.advisor-routes article > div { display: flex; justify-content: space-between; gap: 8px; }
+.advisor-routes article > small { color: #795b3f; }
+.advisor-routes article > em { display: block; color: #87392d; font-style: normal; }
 .advisor-personnel { margin-top: 12px; border-top: 1px solid #a98b5d52; padding-top: 8px; }
 .panel-seal { width: 100%; min-height: 66px; flex-direction: row; }
 .panel-seal span { width: 38px; height: 38px; }

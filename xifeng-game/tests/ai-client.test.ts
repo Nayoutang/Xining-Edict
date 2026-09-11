@@ -67,4 +67,19 @@ describe('辅政官响应协议兼容', () => {
     expect(result.situation).toContain('施政只能围绕这些困境展开');
     expect(result.situation).not.toContain('当前最弱的是执行');
   });
+
+  it('保留同一困境的多条独立施政路线', () => {
+    const state = createInitialState();
+    const dilemmaTitle = state.dilemmas[0]!.title;
+    const result = adaptAdvisorAdvice({
+      routes: [
+        { title: '先核账', dilemmaTitle, advice: '先核对账簿。', tradeoff: '见效较慢但风险较低。', policyId: 'cross-check-ledgers' },
+        { title: '先节流', dilemmaTitle, advice: '先裁减冗费。', tradeoff: '见效较快但增加朝议阻力。', policyId: 'reduce-redundant-spending' },
+      ],
+      dimensions: [{ name: '财政', scope: '国库', role: '主', advice: '处理当前困境。', policyId: 'cross-check-ledgers' }],
+    }, state);
+
+    expect(result.routes).toHaveLength(2);
+    expect(result.policyIds).toEqual(['cross-check-ledgers', 'reduce-redundant-spending']);
+  });
 });

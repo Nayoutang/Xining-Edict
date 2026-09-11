@@ -294,6 +294,15 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
       policyId,
     };
   });
+  const allowedPolicyIds = new Set(allowedPolicies.map(([id]) => id));
+  const dilemmaTitles = new Set((state?.dilemmas || []).map((item) => item?.title));
+  const routes = (Array.isArray(parsed.routes) ? parsed.routes : []).slice(0, 6).map((route) => ({
+    title: conciseSentence(route?.title, '施政路线', 24).replace(/[。！？]$/, ''),
+    dilemmaTitle: dilemmaTitles.has(route?.dilemmaTitle) ? route.dilemmaTitle : (state?.dilemmas?.[0]?.title || '当前首要困境'),
+    advice: modernizeAdvisorText(route?.advice).trim(),
+    tradeoff: modernizeAdvisorText(route?.tradeoff).trim(),
+    policyId: String(route?.policyId || ''),
+  })).filter((route) => route.advice && route.tradeoff && allowedPolicyIds.has(route.policyId));
   const situation = normalizeSituation(parsed.situation, state, mainName, supportName, event);
   const personnelRecommendation = mainName ? recommendCourtPersonnel(state, mainName.split('、')[0]) : undefined;
   const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : conciseSentence(parsed.personnel, '本期无合适的未任候选人。', 72);
@@ -312,9 +321,10 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
     outline,
     situation,
     dimensions,
+    routes,
     personnel,
     personnelRecommendation,
-    policyIds: dimensions.filter((item) => item.role !== '暂缓').map((item) => item.policyId),
+    policyIds: [...new Set((routes.length ? routes : dimensions.filter((item) => item.role !== '暂缓')).map((item) => item.policyId))],
   };
 }
 
@@ -421,6 +431,9 @@ ${formatHistory(state?.history || [])}
 
 只返回JSON：
 {
+  "routes":[
+    {"title":"路线名称","dilemmaTitle":"必须逐字使用当前困境名称","advice":"这条路线单独采纳后要做什么","tradeoff":"相对其他路线的成本、风险和放弃之处","policyId":"对应的一项政务ID"}
+  ],
   "dimensions":[
     {"name":"财政","role":"主或辅或暂缓","advice":"一条具体建议或暂缓理由","decision":"主辅项的二选一裁定，暂缓项留空","policyId":"对应的一项政务ID"},
     {"name":"民生","role":"主或辅或暂缓","advice":"一条具体建议或暂缓理由","decision":"主辅项的二选一裁定，暂缓项留空","policyId":"对应的一项政务ID"},
@@ -433,6 +446,7 @@ ${formatHistory(state?.history || [])}
   const system = `你是历史策略游戏《熙宁抉择》的辅政官，不是推演史官。
 1. 你只能在颁诏前提供提纲，严禁生成可直接颁行的完整诏书，不能声称政策已经实施。
 2. 分析对象只能是当前困境列表；必须按困境严重度决定施政先后。禁止分析、比较、引用或输出财用、民生、边备、士论、执行五项国势。资源只用于判断能否执行。主辅数量不固定，允许多个主项、没有辅项或全部暂缓。
+2.1 对最高严重度困境必须给出二至三条可替代的施政路线；路线须在措施、成本或风险上有真实差异，不得只换同义词。每条路线只绑定一个现有政务ID，能够被玩家单独采纳；若资源只容许一条，仍须说明另外路线为何代价更高。
 3. 尊重熙宁、元丰时期的机构、资源和政治语言。
 4. 固定列出财政、民生、军事、吏治四项且顺序不可改变，不新增制度、任免、外交等维度。
 5. 可引用人物立场，但不得把人物简单判为忠臣或奸臣。

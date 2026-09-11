@@ -616,7 +616,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
 
   return <section className="advisor-workspace">
     <header><div><span>颁诏前咨询 · 御前参详</span><h3>{advice ? '格局判断' : '辅政官'}</h3></div><small>{config.model}</small></header>
-    <p>{advice ? '辅政官已据当前国势、余量与官署人事列出主辅取舍，请陛下据此亲拟诏书。' : '辅政官会先说明当前局势，再列施政取舍与铨选建议；诏书正文仍由陛下裁定。'}</p>
+    <p>{advice ? '辅政官已按当前困境列出可独立采纳的施政路线，请陛下自行组合诏书。' : '辅政官会围绕当前困境提出不同施政路线；诏书正文仍由陛下裁定。'}</p>
     <div className="advisor-question"><textarea value={question} onChange={(e) => onQuestionChange(e.target.value)} placeholder="例如：国库不足、州县抑配并起，我该先查吏还是先筹钱？" /><button type="button" onClick={consult}>召来参详</button></div>
     {advisorError && <strong className="advisor-error">{advisorError}</strong>}
     {advice && <div className="advisor-answer"><div className="advisor-draft">
@@ -624,11 +624,14 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
       <div className="advisor-outline">
         <section className="advisor-situation"><strong>局势研判</strong><p>{advice.situation}</p></section>
         <p className="advisor-capacity">行政余量：{state.resources.administration}/50</p>
-        <div className="advisor-dimensions">{advice.dimensions.map((item) => <article key={item.name}>
+        {advice.routes?.length ? <section className="advisor-routes"><strong>施政路线</strong>{advice.routes.map((route, index) => <article key={`${route.policyId}-${index}`}>
+          <div><strong>{route.title}</strong><button className="advisor-item-adopt" type="button" onClick={() => onAdopt(`${route.title}：${route.advice}\n取舍：${route.tradeoff}`)}>单独采纳</button></div>
+          <small>针对：{route.dilemmaTitle}</small><p>{route.advice}</p><em>{route.tradeoff}</em>
+        </article>)}</section> : <div className="advisor-dimensions">{advice.dimensions.map((item) => <article key={item.name}>
           <div><strong>{item.name}|（{item.scope}）【{item.role}】</strong>{item.role !== '暂缓' && <button className="advisor-item-adopt" type="button" onClick={() => onAdopt(`${item.name}：${item.advice}`)}>采纳</button>}</div>
           <p>{item.advice}</p>
           {item.decision && <small>{item.decision}</small>}
-        </article>)}</div>
+        </article>)}</div>}
         <section className="advisor-personnel"><strong>铨选建议</strong>{advice.personnelRecommendation ? <><p>岗位：{advice.personnelRecommendation.officeName}·{advice.personnelRecommendation.postTitle}</p><p>推荐：{advice.personnelRecommendation.officerName}</p><p>理由：{advice.personnelRecommendation.reason}</p><p>风险：{advice.personnelRecommendation.risk}</p></> : <p>{advice.personnel}</p>}</section>
       </div>
     </div></div>}

@@ -79,6 +79,13 @@ export function localizeAdvisorAdvice(advice: AdvisorAdvice): AdvisorAdvice {
       advice: localizeDisplayText(item.advice),
       decision: item.decision ? localizeDisplayText(item.decision) : undefined,
     })),
+    ...(advice.routes ? { routes: advice.routes.map((route) => ({
+      ...route,
+      title: localizeDisplayText(route.title),
+      dilemmaTitle: localizeDisplayText(route.dilemmaTitle),
+      advice: localizeDisplayText(route.advice),
+      tradeoff: localizeDisplayText(route.tradeoff),
+    })) } : {}),
     personnel: localizeDisplayText(advice.personnel),
     personnelRecommendation: advice.personnelRecommendation ? {
       ...advice.personnelRecommendation,
