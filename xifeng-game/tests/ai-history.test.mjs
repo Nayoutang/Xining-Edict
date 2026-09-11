@@ -89,7 +89,7 @@ describe('AI史实推理边界', () => {
     expect(result.interpretation.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
-  it('辅政官收到政务成本并被要求保持一主一辅的可持续预算', async () => {
+  it('辅政官收到政务成本并按困境动态分配优先级', async () => {
     let requestBody;
     const fetchImpl = vi.fn(async (_url, options) => {
       requestBody = JSON.parse(options.body);
@@ -112,7 +112,8 @@ describe('AI史实推理边界', () => {
     });
     const prompt = requestBody.messages.map((message) => message.content).join('\n');
     expect(prompt).toContain('四个维度必须全部列出，顺序固定为财政、民生、军事、吏治');
-    expect(prompt).toContain('【主】和【辅】各且仅出现一次');
+    expect(prompt).toContain('主辅数量不固定');
+    expect(prompt).not.toContain('恰好一项');
     expect(prompt).toContain('每个维度最多一条施政建议，严禁面面俱到');
     expect(prompt).toContain('当前固定官署与任职');
     expect(prompt).toContain('玩家需裁定什么');
@@ -129,7 +130,7 @@ describe('AI史实推理边界', () => {
     })).advice.policyIds).toEqual(['cross-check-ledgers', 'curb-local-exactions']);
   });
 
-  it('辅政官会修正重复主辅、乱序和空话，稳定输出固定提纲', async () => {
+  it('辅政官保留多个主项并按四维顺序输出', async () => {
     const fetchImpl = vi.fn(async () => mockResponse({
       dimensions: [
         { name: '吏治', role: '主', advice: '宜稳妥推进', policyId: 'northwest-defense' },
@@ -149,14 +150,14 @@ describe('AI史实推理边界', () => {
     expect(dimensionLines.map((line) => line.split('|')[0])).toEqual(['财政', '民生', '军事', '吏治']);
     expect(result.advice.outline).toContain('局势研判:');
     expect(result.advice.outline).toContain('铨选建议:');
-    expect(result.advice.outline.match(/【主】/g)).toHaveLength(1);
+    expect(result.advice.outline.match(/【主】/g)).toHaveLength(2);
     expect(result.advice.outline.match(/【辅】/g)).toHaveLength(1);
-    expect(result.advice.outline.match(/【暂缓】/g)).toHaveLength(2);
-    expect(result.advice.outline).not.toMatch(/宜稳妥推进|视情况而定/);
+    expect(result.advice.outline.match(/【暂缓】/g)).toHaveLength(1);
+    expect(result.advice.dimensions.find((item) => item.name === '吏治').advice).toBe('宜稳妥推进');
     expect(result.advice.outline.length).toBeLessThanOrEqual(900);
   });
 
-  it('连续五次参详都保持四维、一主一辅与九百字上限', async () => {
+  it('保留多个主项、无辅项及全部暂缓的模型判断', async () => {
     let call = 0;
     const roles = [
       ['主', '辅', '暂缓', '暂缓'],
@@ -181,15 +182,13 @@ describe('AI史实推理边界', () => {
     for (let index = 0; index < 5; index += 1) {
       const { advice } = await adviseWithAI({ state: { resources: { administration: 40 - index } }, config, fetchImpl });
       expect(advice.dimensions.map((item) => item.name)).toEqual(['财政', '民生', '军事', '吏治']);
-      expect(advice.dimensions.filter((item) => item.role === '主')).toHaveLength(1);
-      expect(advice.dimensions.filter((item) => item.role === '辅')).toHaveLength(1);
-      expect(advice.dimensions.filter((item) => item.role === '暂缓')).toHaveLength(2);
+      expect(advice.dimensions.map((item) => item.role)).toEqual(roles[index]);
       expect(advice.outline).toContain(`行政余量:${40 - index}/50`);
       expect(advice.outline.length).toBeLessThanOrEqual(900);
     }
   });
 
-  it('连续八回合注入实时局势并避免重复建议，暂缓项不夹带指令', async () => {
+  it('连续八回合注入实时局势但不以模板替换重复建议及暂缓理由', async () => {
     let lastPrompt = '';
     const fetchImpl = vi.fn(async (_url, options) => {
       lastPrompt = JSON.parse(options.body).messages.map((message) => message.content).join('\n');
@@ -197,8 +196,8 @@ describe('AI史实推理边界', () => {
         dimensions: [
           { name: '财政', role: '主', advice: '核对三司账簿，限一月具报', policyId: 'cross-check-ledgers' },
           { name: '民生', role: '辅', advice: '核查民户实负，灾伤户缓征', policyId: 'curb-local-exactions' },
-          { name: '军事', role: '暂缓', advice: '命陕西转运司十日内盘点军储', policyId: 'northwest-defense' },
-          { name: '吏治', role: '暂缓', advice: '逐级核验州县执行，限一月复奏', policyId: 'review-impeachments' },
+          { name: '军事', role: '暂缓', advice: '边备仅20，严重度80。国库仅600万贯，无力新增军费，因此暂缓。', policyId: 'northwest-defense' },
+          { name: '吏治', role: '暂缓', advice: '行政余量不足，现有任务未完成，因此暂缓。', policyId: 'review-impeachments' },
         ],
         personnel: '暂无调任建议',
       });
@@ -224,19 +223,17 @@ describe('AI史实推理边界', () => {
           objectives: [{ title: '财计有序', completed: turn >= 4 }],
           activePolicies: turn > 1 ? [{ policyId: 'cross-check-ledgers', officerId: 'zeng-bu', remainingTurns: 1 }] : [],
           dilemmas: [{ title: '朝议纷争', severity: 60, description: '士论偏低' }], history,
+          advisorHistory: ['核对三司账簿，限一月报告结果。'],
         },
         event: { title: `第${turn}回急务`, description: `本期事件${turn}`, effects: { courtSupport: -2 } },
         config, fetchImpl,
       });
       activeAdvice.push(advice.dimensions.filter((item) => item.role !== '暂缓').map((item) => item.advice).join('|'));
       for (const item of advice.dimensions) adviceByDimension.get(item.name).add(item.advice);
-      for (const item of advice.dimensions.filter((entry) => entry.role === '暂缓')) {
-        expect(item.advice).not.toMatch(/核对|核查|命令|限期|试行|推行|增兵|整顿|复奏|清理|兴修|裁减|缓征|督促|调拨|处分|十日|一月|月内|旬末/);
-      }
-      if (turn > 1) expect(advice.dimensions.filter((item) => item.role !== '暂缓').every((item) => item.advice.startsWith('续办'))).toBe(true);
+      expect(advice.dimensions.find((item) => item.name === '军事').advice).toBe('边备仅20，严重度80。国库仅600万贯，无力新增军费，因此暂缓。');
     }
-    expect(new Set(activeAdvice).size).toBe(8);
-    for (const suggestions of adviceByDimension.values()) expect(suggestions.size).toBe(8);
+    expect(new Set(activeAdvice).size).toBe(1);
+    for (const suggestions of adviceByDimension.values()) expect(suggestions.size).toBe(1);
     expect(lastPrompt).toContain('当前回合：第8/8回；距终局尚余1回；阶段：后期');
     expect(lastPrompt).toContain('五项国势：财用48，民生46，边备50，士论34，执行43');
     expect(lastPrompt).toContain('进行中事项');

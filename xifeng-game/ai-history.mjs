@@ -88,31 +88,20 @@ const advisorDimensions = [
   {
     name: '财政', scope: '国库与岁入', policyId: 'cross-check-ledgers', indicator: 'finance',
     allowed: ['green-sprouts-trial', 'service-reform-preparation', 'reduce-redundant-spending', 'cross-check-ledgers'],
-    actions: ['核查三司账目，十天内报上实际岁入和未收款项。', '分地区核对账面收入与实际入库数，一个月内查清差额。', '比较新法预计收入与首轮实收，删掉虚报数字。', '查清账目与库存不符的钱款，让经办官说明去向。', '根据中期账目压缩次要开支，留下足够的赈灾储备。', '清查拖欠和冒领款项，按地区逐笔结清。', '复核历年财政措施的实际效果，优先补上最大缺口。', '结清仍有争议的钱款，整理并保存最终账册。'],
   },
   {
     name: '民生', scope: '百姓负担', policyId: 'curb-local-exactions', indicator: 'livelihood',
     allowed: ['green-sprouts-trial', 'service-reform-preparation', 'water-conservancy', 'curb-local-exactions'],
-    actions: ['核实受灾家庭的实际负担，按受灾程度登记成册。', '抽查是否强迫百姓借青苗钱，把多收的钱物退回去。', '比较各地役钱负担，先纠正收费最重的州县。', '核实哪些家庭真正从水利工程受益，免掉没有受益者的费用。', '查清州县额外加收的名目，让监司逐项取消。', '复核贫困家庭实际少交了多少，补上遗漏的减免。', '清理过去留下的役钱欠账，禁止对同一笔钱重复催收。', '汇总百姓最终承担的钱役，办完尚未处理的申诉。'],
   },
   {
     name: '军事', scope: '边备与军储', policyId: 'northwest-defense', indicator: 'defense',
     allowed: ['northwest-defense'],
-    actions: ['盘点陕西各处军粮，十天内报出缺口最大的寨堡。', '核对各寨堡现存军粮，先补给最紧急的据点。', '查清军粮运输在哪些路段耽搁，规定期限恢复通行。', '按边境警情调配现有军粮，本期不额外增加总量。', '核对军需实际送达数量，查清运输途中的损耗。', '补足关键寨堡一个月的军粮，暂停没有依据的冒领。', '复查边防最薄弱的地区，把现有兵力集中到那里。', '补齐最后的军粮缺口，并留下足够储备用于善后。'],
   },
   {
     name: '吏治', scope: '诏令能否落到州县', policyId: 'curb-local-exactions', indicator: 'execution',
     allowed: ['curb-local-exactions', 'review-impeachments', 'cross-check-ledgers', 'discipline-corrupt-officials'],
-    actions: ['整理州县收到却未办完的公文，标出每件事的负责人。', '抽查三个地区执行诏令的情况，一个月内报告积压和擅改的问题。', '逐条比较朝廷诏令与州县办案记录，查出被私自改动的内容。', '清查积压公文，让监司按期限逐件处理完毕。', '按执行偏差划分责任，只查有具体问题的官员。', '复核被弹劾官员的证据，证据充分的按规定结案。', '清理州县尚未办完的事项，逐件报告处理结果。', '汇总各地执行成效，对确实失职的官员作出处分。'],
   },
 ];
-
-const pausedReasons = {
-  财政: ['国库目前还能支撑，本期有更急的问题。', '财政数值变化不大，本期应先处理另外两项短板。', '主项和辅项已经占用本期资源，不能再分散财力。', '国库需要保留应急储备，本期不增加财政任务。', '现有收入还能支撑，本期财政不是最紧迫的问题。', '本期主要任务花费较多，没有余力再处理财政事务。', '财政已经逐步稳定，本期应先处理更弱的一项。', '终局前财力仍然够用，本期不再占用行政余量。'],
-  民生: ['百姓负担目前稳定，本期有更急的问题。', '上一道诏令的效果还没看清，本期不再增加百姓负担。', '州县人手已经紧张，本期不能同时增加民生任务。', '民生数值变化不大，目前还不是最急的短板。', '百姓实际负担没有恶化，本期先让位于主要任务。', '主项和辅项已有更急方向，本期暂不处理民生。', '已有减负措施正在生效，本期不重复增加政策。', '终局前民情还能维持，本期资源先用在其他问题上。'],
-  军事: ['边境警情还不紧急，本期财力先用于主要任务。', '现有军粮还能支撑，本期边防不是最弱的一项。', '边境形势没有突然恶化，本期不占用行政余量。', '现有寨堡还能守住，本期有更紧急的问题。', '军需压力仍可控制，本期主项和辅项不放在边防。', '本期内政问题更急，边防暂时没有迫切风险。', '边防已经有所稳定，本期不再分散国力。', '终局前边境还能维持，本期不新增军事任务。'],
-  吏治: ['地方目前还能承受，本期不再增加执行任务。', '官署人手已经紧张，本期资源要留给主要任务。', '上一道诏令仍在执行，本期吏治不是最紧急的问题。', '地方没有出现新的积压，本期不占用行政余量。', '现有承办情况稳定，本期有更急的问题。', '州县压力仍可控制，本期不再增加事务。', '执行情况已经改善，本期先处理更弱的一项。', '终局前地方还能承受，本期不新增吏治任务。'],
-};
 
 function modernizeAdvisorText(value) {
   return localizeInternalTerms(value)
@@ -244,7 +233,7 @@ function fallbackSituation(state, mainName, supportName, event) {
   const turn = Math.max(1, Number(state?.turn || 1));
   const maxTurns = Math.max(turn, Number(state?.maxTurns || 8));
   const eventText = event?.title ? `本回急务是“${event.title}”：${event.description || '详情未载'}` : '本回急务尚待结合御案事件判断';
-  return `现处第${turn}/${maxTurns}回的${stageForTurn(turn, maxTurns)}。国势最薄之处是${weakest}；${trend}。${eventText}。国库${state?.resources?.treasury ?? '未知'}万贯、政略${state?.resources?.politicalCapital ?? '未知'}、行政${state?.resources?.administration ?? '未知'}/50，可承受一主一辅，不宜四面铺开。因此先攻${mainName}，以${supportName}托底。`;
+  return `现处第${turn}/${maxTurns}回的${stageForTurn(turn, maxTurns)}。国势最薄之处是${weakest}；${trend}。${eventText}。国库${state?.resources?.treasury ?? '未知'}万贯、政略${state?.resources?.politicalCapital ?? '未知'}、行政${state?.resources?.administration ?? '未知'}/50，本期主项：${mainName || '无'}；辅项：${supportName || '无'}。具体能否承担须结合政务成本判断。`;
 }
 
 function normalizeSituation(value, state, mainName, supportName, event) {
@@ -290,42 +279,19 @@ function stageForTurn(turn, maxTurns) {
   return ratio <= 0.3 ? '前期' : ratio <= 0.7 ? '中期' : '后期';
 }
 
-function pausedSentence(value, definition, turn, indicators = {}) {
-  void value;
-  void indicators;
-  const choices = pausedReasons[definition.name];
-  return choices[(turn - 1) % choices.length];
-}
-
 function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = {}) {
   const source = Array.isArray(parsed.dimensions) ? parsed.dimensions : [];
   const byName = new Map(source.map((item) => [localizeInternalTerms(item?.name), item]));
-  let mainName = advisorDimensions.find(({ name }) => localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, '') === '主')?.name;
-  if (!mainName) mainName = advisorDimensions[0].name;
-  let supportName = advisorDimensions.find(({ name }) => name !== mainName && localizeInternalTerms(byName.get(name)?.role).replace(/[【】]/g, '') === '辅')?.name;
-  if (!supportName) supportName = advisorDimensions.find(({ name }) => name !== mainName)?.name;
-
-  const turn = Math.max(1, Math.min(8, Math.round(Number(state?.turn) || 1)));
-  const previousPolicyIds = new Set((state?.history || []).flatMap((record) => record?.policyIds || []));
-  const documentedPolicyIds = new Set((state?.history || []).flatMap((record) => (record?.policyOutcomes || []).map((outcome) => outcome?.policyId).filter(Boolean)));
-  const previousAdvice = (state?.advisorHistory || []).join('\n');
+  const mainName = advisorDimensions.filter(({ name }) => byName.get(name)?.role === '主').map(({ name }) => name).join('、');
+  const supportName = advisorDimensions.filter(({ name }) => byName.get(name)?.role === '辅').map(({ name }) => name).join('、');
   const dimensions = advisorDimensions.map((definition) => {
     const item = byName.get(definition.name) || {};
-    const role = definition.name === mainName ? '主' : definition.name === supportName ? '辅' : '暂缓';
+    const requestedRole = localizeInternalTerms(item?.role).replace(/[【】]/g, '').trim();
+    const role = ['主', '辅', '暂缓'].includes(requestedRole) ? requestedRole : '暂缓';
     const requestedPolicyId = String(item?.policyId || '');
     const policyId = definition.allowed.includes(requestedPolicyId) ? requestedPolicyId : definition.policyId;
-    const fallback = definition.actions[turn - 1] || definition.actions.at(-1);
-    let advice = role === '暂缓'
-      ? pausedSentence(item?.advice, definition, turn, state?.indicators)
-      : conciseSentence(item?.advice, fallback, 72);
-    const repeatedSuggestion = role !== '暂缓' && previousAdvice.includes(advice.replace(/[。！？]$/, ''));
-    if (role !== '暂缓' && repeatedSuggestion) {
-      advice = conciseSentence(previousPolicyIds.has(policyId) ? `续办，${fallback}` : fallback, fallback, 72);
-    } else if (role !== '暂缓' && previousPolicyIds.has(policyId) && !documentedPolicyIds.has(policyId)) {
-      advice = conciseSentence(`续办，${fallback}`, `续办，${fallback}`, 72);
-    } else if (role !== '暂缓' && previousPolicyIds.has(policyId) && !advice.startsWith('续办')) {
-      advice = conciseSentence(`续办，${advice}`, `续办，${fallback}`, 72);
-    }
+    // Preserve the model's reasoning, including repeated advice and multi-sentence evidence.
+    const advice = modernizeAdvisorText(item?.advice).trim() || '模型未提供本项建议或理由，请重新参详。';
     return {
       name: definition.name,
       scope: definition.scope,
@@ -336,7 +302,7 @@ function normalizeAdvisorOutline(parsed, current, capacity, state = {}, event = 
     };
   });
   const situation = normalizeSituation(parsed.situation, state, mainName, supportName, event);
-  const personnelRecommendation = recommendCourtPersonnel(state, mainName);
+  const personnelRecommendation = mainName ? recommendCourtPersonnel(state, mainName.split('、')[0]) : undefined;
   const personnel = personnelRecommendation ? `${personnelRecommendation.officeName}${personnelRecommendation.postTitle}，荐${personnelRecommendation.officerName}。` : conciseSentence(parsed.personnel, '本期无合适的未任候选人。', 72);
   const render = (items) => [
     '局势研判:',
@@ -431,22 +397,19 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 可执行政务及其本回合成本：${JSON.stringify(policyBudget)}
 此前各回施政档案（这是判断下一步的主要依据，不得忽略）：
 ${formatHistory(state?.history || [])}
-此前辅政官已提方向（不得原句重提）：${(state?.advisorHistory || []).slice(-6).join('\n') || '无。'}
+此前辅政官已提方向（结合执行结果判断是否续办）：${(state?.advisorHistory || []).slice(-6).join('\n') || '无。'}
 玩家案前已有文字：${String(currentEdict || '').trim() || '尚未落笔'}
 玩家向辅政官询问：${String(question || '').trim() || '请分析当前格局并提出几条可行路线'}
 
 最终显示文本必须严格等价于以下格式，行政余量使用当前实数 ${administrativeRemaining}/${administrativeCapacity}：
 局势研判:
-用三至四句现代白话说明最弱国势、上期趋势、本期事件、资源能承担什么，以及为何选此主辅。
+用三至四句现代白话说明最紧迫困境及严重度、相关国势实数、上期趋势、本期事件、资源能承担什么，以及各项优先级的依据。困境严重度越高越危险，国势数值越低越薄弱，不得混淆。
 
 行政余量:${administrativeRemaining}/${administrativeCapacity}
 
-财政|(国库与岁入)【主】具体建议，一句话
-  需要决定：玩家需要二选一的执行尺度或先后顺序
-民生|(百姓负担)【辅】具体建议，一句话
-  需要决定：玩家需要二选一的执行尺度或先后顺序
-军事|(边备与军储)【暂缓】暂缓理由，一句话
-吏治|(诏令能否落到州县)【暂缓】暂缓理由，一句话
+维度名|(维度说明)【主或辅或暂缓】基于实际困境和数值的建议或暂缓理由
+  需要决定：仅在主辅项写需要玩家裁定的执行尺度或先后顺序
+以上为字段说明，不预设任何维度的优先级。
 
 铨选建议:
 岗位:现有官署·现有官职
@@ -454,9 +417,9 @@ ${formatHistory(state?.history || [])}
 理由:其履历如何改善本期主务
 风险:改授可能带来的士论或施政偏好风险
 
-四个维度必须全部列出，顺序固定为财政、民生、军事、吏治。【主】和【辅】各且仅出现一次，其余两项必须标【暂缓】。每个维度最多一条施政建议，严禁面面俱到。局势研判、四维建议、暂缓理由和须裁定内容都必须使用现代白话，像向没有古代官制知识的玩家解释一样直白；维度名、括号说明与【主】【辅】【暂缓】标记保持不变。主辅项必须同时写明“问题在哪里”“谁去做什么”“多久回报”和“玩家需裁定什么”；不得使用“具报、复奏、奉行、文移、案牍、实负、催科”等需要玩家自行翻译的公文词。不得只写“抽验三路”“调查实况”等无从下手的缩写，也不得写“宜稳妥推进”“酌情办理”“视情况而定”等空话。铨选建议只能指向已有官署和官职，不得新建、撤并或改造政治架构；任免仅是建议，由玩家在铨选界面亲自操作。显示文本总长度控制在九百字以内，不写骈句。
+四个维度必须全部列出，顺序固定为财政、民生、军事、吏治。主辅数量不固定：允许多个主项、零个或多个辅项，也允许资源不足时全部暂缓。按困境严重度、趋势与预算决定优先级，不预设财政优先。每个维度最多一条施政建议，严禁面面俱到。局势研判、四维建议、暂缓理由和须裁定内容都必须使用现代白话，像向没有古代官制知识的玩家解释一样直白；维度名、括号说明与【主】【辅】【暂缓】标记保持不变。主辅项必须同时写明“问题在哪里”“谁去做什么”“多久回报”和“玩家需裁定什么”；不得使用“具报、复奏、奉行、文移、案牍、实负、催科”等需要玩家自行翻译的公文词。不得只写“抽验三路”“调查实况”等无从下手的缩写，也不得写“宜稳妥推进”“酌情办理”“视情况而定”等空话。铨选建议只能指向已有官署和官职，不得新建、撤并或改造政治架构；任免仅是建议，由玩家在铨选界面亲自操作。显示文本总长度控制在九百字以内，不写骈句。
 
-先阅读施政档案中的“执行状态、已见结果、阻力、遗留与下一步”，再决定本回建议。已经顺利推进的措施不得原样再提；部分落实或执行受阻的事项如需继续，必须以“续办”开头，直接处理档案中的遗留或阻力，并明确本期新增着力点。不得重复此前回合已经提出或颁行的建议方向，不得把换同义词当作新建议。建议还须结合本期数值短板与困境；士论偏低时须考虑缓和朝议或收窄推行力度。${stage === '前期' ? '当前为前期，重在核清底数与小范围试办。' : stage === '中期' ? '当前为中期，重在推行、核验与纠偏。' : '当前为后期，重在巩固成果、结清遗留与善后。'}【暂缓】项只准说明“为何本期不做”，严禁写任何动作、对象或期限。
+先阅读施政档案中的“执行状态、已见结果、阻力、遗留与下一步”，再决定本回建议。已经顺利推进的措施不得原样再提；部分落实或执行受阻的事项如需继续，必须以“续办”开头，直接处理档案中的遗留或阻力，并明确本期新增着力点。此方向上期已提时，请给出新着力点或明确标为续办；问题未解决可以重复建议并说明原因，不得为求不同而编造措施或把换同义词当作新建议。建议还须结合本期数值短板与困境；士论偏低时须考虑缓和朝议或收窄推行力度。${stage === '前期' ? '当前为前期，重在核清底数与小范围试办。' : stage === '中期' ? '当前为中期，重在推行、核验与纠偏。' : '当前为后期，重在巩固成果、结清遗留与善后。'}【暂缓】项只准说明“为何本期不做”，严禁写任何动作、对象或期限。
 
 你须在内部核算政略、行政与国库成本：总政略成本还要加上执行官一次性的政略消耗修正；结算后须至少保留 12 点政略、10 点行政和 800 万贯国库。资源不足时，将高成本方向列为【暂缓】，不得堆叠政务伪装周全。只提出脚手架，不得输出诏书正文、制曰、奉诏、钦此等成稿措辞。
 
@@ -473,11 +436,11 @@ ${formatHistory(state?.history || [])}
 }`;
   const system = `你是历史策略游戏《熙宁抉择》的辅政官，不是推演史官。
 1. 你只能在颁诏前提供提纲，严禁生成可直接颁行的完整诏书，不能声称政策已经实施。
-2. 必须作出取舍：恰好一项【主】、一项【辅】、两项【暂缓】。
+2. 按困境严重度与可用预算作出取舍，主辅数量不固定，允许多个主项、没有辅项或全部暂缓。
 3. 尊重熙宁、元丰时期的机构、资源和政治语言。
 4. 固定列出财政、民生、军事、吏治四项且顺序不可改变，不新增制度、任免、外交等维度。
 5. 可引用人物立场，但不得把人物简单判为忠臣或奸臣。
-6. 必须优先保证主辅两项在当前政略、行政与国库预算内可持续执行。
+6. 必须优先保证所有主辅项在当前政略、行政与国库预算内可持续执行。
 7. 每项只有一句具体可执行建议；暂缓项只写暂缓理由，不得夹带措施。
 8. 局势分析和全部提纲文字都必须使用现代白话，主辅项各给一个需要玩家裁定的二选一问题；总显示文本不得超过九百字。
 9. 铨选建议仅能改授现有岗位，不得改革官制架构，也不得自动任免。

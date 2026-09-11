@@ -36,7 +36,7 @@ const formatGameDate = (date: GameState['date']) => `熙宁${numerals[date.reign
 const formatDate = (state: GameState) => formatGameDate(state.date);
 const effectText = (changes: Partial<Record<IndicatorKey, number>>) => Object.entries(changes).map(([key, value]) => `${indicatorMeta[key as IndicatorKey].label} ${Number(value) > 0 ? '+' : ''}${value}`);
 const emptyAIConfig: AIConfig = { provider: 'deepseek', apiKey: '', ...providerDefaults.deepseek };
-const defaultAdvisorQuestion = '请按财政、民生、军事、吏治列出一主一辅的施政提纲。';
+const defaultAdvisorQuestion = '请根据当前困境严重度、变化趋势和可用资源，按财政、民生、军事、吏治列出施政优先级与具体依据。';
 
 function readAIConfig(key: string): AIConfig {
   try {
