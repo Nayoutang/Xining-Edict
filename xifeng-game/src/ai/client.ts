@@ -88,7 +88,8 @@ function recommendPersonnel(state: GameState | null, mainName: AdvisorAdvice['di
     .filter((item) => !appointed.has(item.id) && item.specialtyTags.some((tag) => target.tags.includes(tag)))
     .sort((left, right) => (right.executionBonus - right.politicalCostModifier * .4) - (left.executionBonus - left.politicalCostModifier * .4));
   const candidate = candidates[0];
-  const post = office.posts.find((item) => !item.appointeeId) ?? office.posts[0];
+  // Routine advice may fill a vacancy, but must not casually replace an incumbent.
+  const post = office.posts.find((item) => !item.appointeeId);
   if (!candidate || !post) return undefined;
   return {
     officeKey: office.key,

@@ -259,7 +259,8 @@ function recommendCourtPersonnel(state, mainName) {
   if (!target || !office) return null;
   const appointed = new Set((state?.polity?.offices || []).flatMap((item) => (item?.posts || []).map((post) => post?.appointeeId).filter(Boolean)));
   const officerId = target.officerIds.find((id) => !appointed.has(id));
-  const post = office.posts?.find((item) => !item?.appointeeId) || office.posts?.[0];
+  // Routine advice only fills vacancies; replacing an incumbent requires the player.
+  const post = office.posts?.find((item) => !item?.appointeeId);
   const officerName = allowedOfficers.find(([id]) => id === officerId)?.[1];
   if (!officerId || !officerName || !post) return null;
   return {
@@ -392,7 +393,7 @@ export async function adviseWithAI({ question, currentEdict = '', state = {}, ev
 进行中事项：${activeItems.length ? JSON.stringify(activeItems) : '暂无'}
 本回合困境事件：${event?.title || '未载'}——${event?.description || '未载'}；即时影响${JSON.stringify(event?.effects || {})}
 当前其他困境：${JSON.stringify(state?.dilemmas || [])}
-当前固定官署与任职（只能建议在现有岗位上改授或罢免，不得改设机构）：${JSON.stringify(state?.polity || {})}
+当前固定官署与任职（铨选建议只可填补空缺；不得建议替换已有任官，也不得改设机构）：${JSON.stringify(state?.polity || {})}
 当前准备任用的执行官：${JSON.stringify(officer)}
 可执行政务及其本回合成本：${JSON.stringify(policyBudget)}
 此前各回施政档案（这是判断下一步的主要依据，不得忽略）：
@@ -412,7 +413,7 @@ ${formatHistory(state?.history || [])}
 以上为字段说明，不预设任何维度的优先级。
 
 铨选建议:
-岗位:现有官署·现有官职
+岗位:现有官署·当前空缺官职
 推荐:未在其他核心岗位任职的官员
 理由:其履历如何改善本期主务
 风险:改授可能带来的士论或施政偏好风险
@@ -443,7 +444,7 @@ ${formatHistory(state?.history || [])}
 6. 必须优先保证所有主辅项在当前政略、行政与国库预算内可持续执行。
 7. 每项只有一句具体可执行建议；暂缓项只写暂缓理由，不得夹带措施。
 8. 局势分析和全部提纲文字都必须使用现代白话，主辅项各给一个需要玩家裁定的二选一问题；总显示文本不得超过九百字。
-9. 铨选建议仅能改授现有岗位，不得改革官制架构，也不得自动任免。
+9. 铨选建议仅能填补现有空缺岗位，不得替换现任、改革官制架构或自动任免；没有合适空缺时明确不调整人事。
 10. 输出必须为JSON。
 11. ${outputLanguageRule}`;
   const output = await callModel(config, system, prompt, fetchImpl);

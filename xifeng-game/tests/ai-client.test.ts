@@ -35,4 +35,20 @@ describe('辅政官响应协议兼容', () => {
     expect(text).toContain('让州县逐项列出并公开，没有朝廷正式文件依据的项目立即停止征收。');
     expect(text).not.toMatch(/民力困敝|政令壅滞|故本期|只宜|岁入岁支|隐没羡余|径行加赋|州军|边警未至急迫|宜顾主务/);
   });
+
+  it('主务官署没有空缺时不建议反复替换现任', () => {
+    const state = createInitialState();
+    const finance = state.polity.offices.find((office) => office.key === 'finance')!;
+    finance.posts[0]!.appointeeId = 'zeng-bu';
+    finance.posts[1]!.appointeeId = 'lv-huiqing';
+    const result = adaptAdvisorAdvice({
+      dimensions: [
+        { name: '财政', scope: '国库', role: '主', advice: '核对账簿。', policyId: 'cross-check-ledgers' },
+        { name: '民生', scope: '百姓', role: '暂缓', advice: '本期暂缓。', policyId: 'curb-local-exactions' },
+      ],
+    }, state);
+
+    expect(result.personnelRecommendation).toBeUndefined();
+    expect(result.personnel).toBe('本期无合适的未任候选人。');
+  });
 });
