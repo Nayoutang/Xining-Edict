@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
 import type { GameState } from '../game/types';
 import { getPoliticalCapitalRecovery } from '../game/turn-engine';
 import { buildCrisisMarkers } from './crisis-map';
@@ -15,8 +14,6 @@ interface GameScreenProps {
   onOpenArchive: () => void;
   onOpenRecords: () => void;
   onOpenSaves: () => void;
-  musicMuted: boolean;
-  onToggleMusic: () => void;
 }
 
 const numerals = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
@@ -36,8 +33,6 @@ export function GameScreen({
   onOpenArchive,
   onOpenRecords,
   onOpenSaves,
-  musicMuted,
-  onToggleMusic,
 }: GameScreenProps) {
   const [activeResourceId, setActiveResourceId] = useState<string | null>(null);
   const resourceLayerRef = useRef<HTMLElement>(null);
@@ -102,7 +97,6 @@ export function GameScreen({
       <NavBookmark asset={assetUrl('assets/navigation/nav-archive.png')} label="秘阁" onClick={onOpenArchive} />
       <NavBookmark asset={assetUrl('assets/navigation/nav-records.png')} label="起居注" onClick={onOpenRecords} />
       <button className="historian-settings" type="button" onClick={onOpenSaves} title="存档" aria-label="打开存档"><img src={assetUrl('assets/seals/settings.png')} alt="" aria-hidden="true" /></button>
-      <button className={`music-toggle${musicMuted ? ' is-muted' : ''}`} type="button" onClick={onToggleMusic} title={`背景音乐：锦书难托（${musicMuted ? '点击开启' : '点击静音'}）`} aria-label={musicMuted ? '开启背景音乐' : '静音背景音乐'}>{musicMuted ? <VolumeX /> : <Volume2 />}</button>
     </nav>
 
     <header className="turn-layer" data-testid="turn-layer">

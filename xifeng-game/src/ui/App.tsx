@@ -35,12 +35,6 @@ const formatGameDate = (date: GameState['date']) => `熙宁${numerals[date.reign
 const formatDate = (state: GameState) => formatGameDate(state.date);
 const effectText = (changes: Partial<Record<IndicatorKey, number>>) => Object.entries(changes).map(([key, value]) => `${indicatorMeta[key as IndicatorKey].label} ${Number(value) > 0 ? '+' : ''}${value}`);
 const emptyAIConfig: AIConfig = { provider: 'deepseek', apiKey: '', ...providerDefaults.deepseek };
-const bgmMutedKey = 'xifeng-bgm-muted';
-
-function readBgmMuted(): boolean {
-  try { return localStorage.getItem(bgmMutedKey) === 'true'; }
-  catch { return false; }
-}
 
 function readAIConfig(key: string): AIConfig {
   try {
@@ -69,22 +63,15 @@ export function App() {
   const [error, setError] = useState('');
   const [inferenceConfig, setInferenceConfig] = useState(() => readAIConfig('xifeng-ai-config'));
   const [aiBusy, setAIBusy] = useState('');
-  const [bgmMuted, setBgmMuted] = useState(readBgmMuted);
   const bgmRef = useRef<HTMLAudioElement>(null);
   const advisorConfig: AIConfig = { ...inferenceConfig };
   const event = historicalEvents.find((item) => item.turn === state.turn) ?? historicalEvents.at(-1)!;
   const officer = officers.find((item) => item.id === officerId) ?? officers[0]!;
 
   useEffect(() => {
-    const audio = bgmRef.current;
-    if (!audio) return;
-    audio.volume = .32;
-    audio.muted = bgmMuted;
-  }, [bgmMuted]);
-
-  useEffect(() => {
+    if (bgmRef.current) bgmRef.current.volume = .32;
     const startMusic = () => {
-      if (!bgmMuted) void bgmRef.current?.play().catch(() => undefined);
+      void bgmRef.current?.play().catch(() => undefined);
       window.removeEventListener('pointerdown', startMusic);
       window.removeEventListener('keydown', startMusic);
     };
@@ -94,19 +81,7 @@ export function App() {
       window.removeEventListener('pointerdown', startMusic);
       window.removeEventListener('keydown', startMusic);
     };
-  }, [bgmMuted]);
-
-  function toggleBgm() {
-    setBgmMuted((current) => {
-      const next = !current;
-      try { localStorage.setItem(bgmMutedKey, String(next)); } catch { /* 浏览器禁用存储时只保留本次设置。 */ }
-      if (bgmRef.current) {
-        bgmRef.current.muted = next;
-        if (!next) void bgmRef.current.play().catch(() => undefined);
-      }
-      return next;
-    });
-  }
+  }, []);
 
   function showDilemmas(baseline: DilemmaProgress[] | null = null) {
     setDilemmaBaseline(baseline);
@@ -202,8 +177,6 @@ export function App() {
       onOpenArchive={() => { setArchiveReturnsToEdict(false); setPanel('archive'); }}
       onOpenRecords={() => setPanel('records')}
       onOpenSaves={() => setPanel('saves')}
-      musicMuted={bgmMuted}
-      onToggleMusic={toggleBgm}
     />
 
     {panel && <Drawer title={panelTitles[panel]} kind={panel} variant="workspace" onClose={() => { if (panel === 'dilemmas') setDilemmaBaseline(null); if (panel === 'archive' && archiveReturnsToEdict) { setArchiveReturnsToEdict(false); setPanel('edict'); } else setPanel(null); }}>
