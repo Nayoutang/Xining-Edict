@@ -4,7 +4,7 @@ import { appointCourtOfficer, createInitialState, describeCourtCandidateFit, dis
 import { consultAdvisorRemote, interpretEdictRemote, narrateSettlementRemote, providerDefaults, testAIConnectionRemote } from '../ai/client';
 import type { AdvisorAdvice, AIConfig, CourtOfficeKey, CourtPostKey, DilemmaProgress, EdictInterpretation, GameState, HistoricalEvent, HistoricalNarrative, IndicatorKey, Officer, TurnRecord } from '..';
 import { GameScreen } from './GameScreen';
-import { appendAdoptedAdvice } from './advisor-adopt';
+import { appendAdoptedAdvice, formatAdoptedRoute } from './advisor-adopt';
 import { paginate } from './pagination';
 import { addPlainReactionLead, localizeAdvisorAdvice, localizeDisplayText, localizeHistoricalNarrative } from './text-localization';
 
@@ -625,7 +625,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
         <section className="advisor-situation"><strong>局势研判</strong><p>{advice.situation}</p></section>
         <p className="advisor-capacity">行政余量：{state.resources.administration}/50</p>
         {advice.routes?.length ? <section className="advisor-routes"><strong>施政路线</strong>{advice.routes.map((route, index) => <article key={`${route.policyId}-${index}`}>
-          <div><strong>{route.title}</strong><button className="advisor-item-adopt" type="button" onClick={() => onAdopt(`${route.title}：${route.advice}\n取舍：${route.tradeoff}`)}>单独采纳</button></div>
+          <div><strong>{route.title}</strong><button className="advisor-item-adopt" type="button" onClick={() => onAdopt(formatAdoptedRoute(route.title, route.advice))}>单独采纳</button></div>
           <small>针对：{route.dilemmaTitle}</small><p>{route.advice}</p><em>{route.tradeoff}</em>
         </article>)}</section> : <div className="advisor-dimensions">{advice.dimensions.map((item) => <article key={item.name}>
           <div><strong>{item.name}|（{item.scope}）【{item.role}】</strong>{item.role !== '暂缓' && <button className="advisor-item-adopt" type="button" onClick={() => onAdopt(`${item.name}：${item.advice}`)}>采纳</button>}</div>

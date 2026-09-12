@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendAdoptedAdvice } from '../src/ui/advisor-adopt';
+import { appendAdoptedAdvice, formatAdoptedRoute } from '../src/ui/advisor-adopt';
 
 describe('辅政官建议采纳', () => {
   it('首次采纳会预填编辑区，之后采纳按新行追加而不覆盖', () => {
@@ -13,5 +13,14 @@ describe('辅政官建议采纳', () => {
   it('保留玩家已经编辑的正文，只清理末尾空行', () => {
     expect(appendAdoptedAdvice('先行小范围试办。\n\n', '吏治：抽查三个地区的执行情况。'))
       .toBe('先行小范围试办。\n吏治：抽查三个地区的执行情况。');
+  });
+
+  it('单独采纳路线时只写入政令正文，不写入红字取舍注释', () => {
+    expect(formatAdoptedRoute(
+      '先追赃裁断再清吏',
+      '由参知政事主持，对已核对证实的涉案官先追回赃款。',
+    )).toBe(
+      '先追赃裁断再清吏：由参知政事主持，对已核对证实的涉案官先追回赃款。',
+    );
   });
 });
