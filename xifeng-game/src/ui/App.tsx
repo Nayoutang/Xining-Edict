@@ -623,7 +623,7 @@ function AdvisorWorkspace({ state, event, officer, currentEdict, config, setBusy
       <h4>参详提纲</h4>
       <div className="advisor-outline">
         <section className="advisor-situation"><strong>局势研判</strong><p>{advice.situation}</p></section>
-        <p className="advisor-capacity">行政余量：{state.resources.administration}/50</p>
+        <p className="advisor-capacity"><span>政略余量：{state.resources.politicalCapital}/100</span><span>行政余量：{state.resources.administration}/50</span></p>
         {advice.routes?.length ? <section className="advisor-routes"><strong>施政路线</strong>{advice.routes.map((route, index) => <article key={`${route.policyId}-${index}`}>
           <div><strong>{route.title}</strong><button className="advisor-item-adopt" type="button" onClick={() => onAdopt(formatAdoptedRoute(route.title, route.advice))}>单独采纳</button></div>
           <small>针对：{route.dilemmaTitle}</small><p>{route.advice}</p><em>{route.tradeoff}</em>

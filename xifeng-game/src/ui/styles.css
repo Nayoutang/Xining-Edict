@@ -118,7 +118,7 @@ button { font: inherit; }
 .advisor-outline p { margin: 0; }
 .advisor-situation { margin-bottom: 10px; }
 .advisor-situation strong,.advisor-personnel strong { display: block; margin-bottom: 3px; color: #74382d; }
-.advisor-capacity { margin-bottom: 10px !important; color: #6e553a; }
+.advisor-capacity { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-bottom: 10px !important; color: #6e553a; }
 .advisor-dimensions { display: grid; gap: 9px; }
 .advisor-dimensions article { border-left: 2px solid #9b7c4f80; padding-left: 8px; }
 .advisor-dimensions article > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
