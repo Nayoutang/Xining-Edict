@@ -4,6 +4,7 @@
 
 - [在线游玩](https://nayoutang.github.io/Xining-Edict/)
 - [下载 Windows 游戏本体](https://github.com/Nayoutang/Xining-Edict/releases/latest/download/Xining-Edict-Windows.exe)
+- [查看详细游戏说明](./玩家说明.md)
 - [查看发布版本](https://github.com/Nayoutang/Xining-Edict/releases)
 
 ## 本地开发
